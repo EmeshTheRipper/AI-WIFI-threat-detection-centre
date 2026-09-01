@@ -1,0 +1,9 @@
+[project]
+name = "sentinelai"
+version = "0.1.0"
+description = "Explainable AI-Based Hybrid Intrusion Detection System"
+requires-python = ">=3.9"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

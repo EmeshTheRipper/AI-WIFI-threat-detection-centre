@@ -1,0 +1,43 @@
+# SentinelAI .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment variables
+.env
+
+# Logs
+logs/*.log
+
+# Data (large files - track with DVC later)
+data/raw/*.pcap
+data/raw/*.pcapng
+data/processed/*.csv
+data/processed/*.parquet
+
+# Models (large files - track with DVC later)
+models/*.pkl
+models/*.joblib
+models/*.h5
+
+# Reports (generated)
+reports/*.html
+reports/*.pdf
+
+# OS files
+.DS_Store
+Thumbs.db
+~$*
