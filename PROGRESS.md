@@ -5,8 +5,8 @@
 ## Current Status
 
 - **Last updated:** 2026-09-02
-- **Current level:** Level 7 — Event Correlation (NOT STARTED)
-- **Last commit:** `f3e2452` — Level 6: hybrid detection
+- **Current level:** Level 8 — Risk Scoring (NOT STARTED)
+- **Last commit:** `8a7a289` — Level 7: event correlation
 - **Branch:** `main` (pushed to GitHub)
 
 ## Learning Levels
@@ -19,7 +19,7 @@
 | 4 | Rule-Based Threat Detection | ✅ DONE |
 | 5 | Machine Learning Fundamentals | ✅ DONE |
 | 6 | Hybrid Detection | ✅ DONE |
-| 7 | Event Correlation | ⬜ NOT STARTED |
+| 7 | Event Correlation | ✅ DONE |
 | 8 | Risk Scoring | ⬜ NOT STARTED |
 | 9 | MITRE ATT&CK Mapping | ⬜ NOT STARTED |
 | 10 | Explainable AI | ⬜ NOT STARTED |
@@ -58,6 +58,12 @@
 - Verdict logic: rule+ML both=attack → malicious; either one → suspicious; neither → normal
 - Tests: `tests/test_hybrid.py` (8 tests)
 
+### Level 7 — Event Correlation (DONE)
+- `src/correlation/correlator.py` — `Correlator`, `Incident`
+- Groups flagged verdicts by src_ip into incidents; scores by events/targets/ports/protocols
+- `critical_incidents()` flags multi-target, high-confidence, or high-volume attackers
+- Tests: `tests/test_correlation.py` (8 tests)
+
 ## Environment / How to run
 
 - **Python:** `py` launcher (Python 3.14.6). Installed deps: scapy, pandas, numpy, pytest, scikit-learn.
@@ -75,9 +81,9 @@
 
 ## Next actions (when resuming)
 
-1. **Level 7 — Event Correlation:**
-   - Correlate verdicts/incidents across time & sources to spot multi-step attacks.
-   - Create `src/correlation/correlator.py`.
+1. **Level 8 — Risk Scoring:**
+   - Assign a numeric risk score (0-100) to each incident based on severity, confidence, targets, and criticality.
+   - Create `src/risk/scorer.py`.
 2. Install `shap` before Level 10 (Explainable AI).
 
 ## Scratch / decisions log
@@ -88,3 +94,4 @@
 - 2026-09-02: Built Level 4 rule-based detection module (PortScan, SYN Flood, Ping Sweep rules) + 7 tests. Rules use configurable thresholds, alerts sorted by severity. All 17 tests passing.
 - 2026-09-02: Built Level 5 ML module (synthetic data generator, RandomForest trainer, predictor) + 8 tests. Installed scikit-learn. All 25 tests passing. Model saves/loads correctly. Synthetic data is a placeholder until real labeled captures are available.
 - 2026-09-02: Built Level 6 hybrid detection (HybridEngine merging rules + ML into per-flow verdicts) + 8 tests. Fixed ML feature-alignment bug (missing one-hot proto columns). All 33 tests passing. Note: synthetic-trained ML flags sample PCAP as suspicious — expected until real labeled data.
+- 2026-09-02: Built Level 7 event correlation (Correlator grouping verdicts into per-source incidents, criticality heuristics) + 8 tests. All 41 tests passing. Output groups 51 incidents from sample PCAP, flags 10.0.0.2 as critical.

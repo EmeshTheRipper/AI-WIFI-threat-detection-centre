@@ -10,6 +10,7 @@ import logging
 from pathlib import Path
 
 from src.capture import PcapReader, parse_packet, parse_packets
+from src.correlation import Correlator
 from src.detection import HybridEngine, RuleEngine
 from src.features import build_features_from_pcap, flow_summary
 from src.ml import ModelPredictor, ModelTrainer, generate_synthetic_flows
@@ -113,6 +114,22 @@ def analyze_pcap(filepath: str) -> int:
     for v in verdicts:
         print(f"  {v.summary()}")
 
+    print("\n[CORRELATION] Grouping events into incidents...")
+    correlator = Correlator()
+    incidents = correlator.correlate(verdicts)
+    corr_summary = correlator.summary(incidents)
+    print(f"  Total incidents    : {corr_summary['total_incidents']}")
+    print(f"  Critical incidents : {corr_summary['critical_incidents']}")
+    print()
+    for inc in incidents:
+        critical_mark = "  ** CRITICAL **" if inc in correlator.critical_incidents() else ""
+        print(
+            f"  {inc.src_ip:>16} : {inc.total_events} events "
+            f"({inc.malicious_events} malicious / {inc.suspicious_events} susp), "
+            f"{inc.unique_targets} targets, {inc.unique_ports} ports "
+            f"protocols={sorted(inc.protocols)}{critical_mark}"
+        )
+
     return len(records)
 
 
@@ -127,7 +144,7 @@ def main():
 
     print("\n[SENTINEL] SentinelAI - Threat Detection System")
     print("=" * 50)
-    print("Level 6: Hybrid Detection loaded\n")
+    print("Level 7: Event Correlation loaded\n")
 
     if len(sys.argv) > 1:
         cmd = sys.argv[1]
