@@ -10,6 +10,7 @@ import logging
 from pathlib import Path
 
 from src.capture import PcapReader, parse_packet, parse_packets
+from src.features import build_features_from_pcap, flow_summary
 
 
 def setup_logging():
@@ -48,6 +49,14 @@ def analyze_pcap(filepath: str) -> int:
 
     records = parse_packets(packets)
     logger.info("Parsed %d/%d packets", len(records), len(packets))
+
+    print("\n[FEATURES] Building flow features...")
+    df, summary = build_features_from_pcap(filepath)
+    print(f"  Raw records parsed : {summary['raw_records']}")
+    print(f"  Flows grouped      : {summary['flows']}")
+    print(f"  Feature matrix     : {summary['shape'][0]} rows x {summary['shape'][1]} cols")
+    print(f"  Summary            : {flow_summary(df)}")
+
     return len(records)
 
 
@@ -62,7 +71,7 @@ def main():
 
     print("\n[SENTINEL] SentinelAI - Threat Detection System")
     print("=" * 50)
-    print("Level 2: Network & PCAP Fundamentals loaded\n")
+    print("Level 3: Data Processing & Feature Engineering loaded\n")
 
     if len(sys.argv) > 1:
         analyze_pcap(sys.argv[1])
