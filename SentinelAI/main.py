@@ -14,6 +14,7 @@ from src.correlation import Correlator
 from src.detection import HybridEngine, RuleEngine
 from src.features import build_features_from_pcap, flow_summary
 from src.ml import ModelPredictor, ModelTrainer, generate_synthetic_flows
+from src.risk import RiskScorer
 
 
 def setup_logging():
@@ -130,6 +131,14 @@ def analyze_pcap(filepath: str) -> int:
             f"protocols={sorted(inc.protocols)}{critical_mark}"
         )
 
+    print("\n[RISK] Scoring incidents...")
+    scorer = RiskScorer()
+    scored = scorer.score_all(incidents)
+    print(f"  Incidents scored   : {len(scored)}")
+    print()
+    for s in scored:
+        print(f"  {s.summary()}  {s.components}")
+
     return len(records)
 
 
@@ -144,7 +153,7 @@ def main():
 
     print("\n[SENTINEL] SentinelAI - Threat Detection System")
     print("=" * 50)
-    print("Level 7: Event Correlation loaded\n")
+    print("Level 8: Risk Scoring loaded\n")
 
     if len(sys.argv) > 1:
         cmd = sys.argv[1]
