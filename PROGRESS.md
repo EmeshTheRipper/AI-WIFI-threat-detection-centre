@@ -5,8 +5,8 @@
 ## Current Status
 
 - **Last updated:** 2026-09-02
-- **Current level:** Level 12 — Documentation & Deployment (NOT STARTED)
-- **Last commit:** `dae161a` — Level 11: SOC Dashboard
+- **Current level:** Level 12 — Documentation & Deployment (COMPLETE — all 12 levels done)
+- **Last commit:** `fc2eb5c` — Level 12: Documentation & Deployment
 - **Branch:** `main` (pushed to GitHub)
 
 ## Learning Levels
@@ -24,7 +24,7 @@
 | 9 | MITRE ATT&CK Mapping | ✅ DONE |
 | 10 | Explainable AI | ✅ DONE |
 | 11 | SOC Dashboard | ✅ DONE |
-| 12 | Professional Engineering | ⬜ NOT STARTED |
+| 12 | Professional Engineering | ✅ DONE |
 
 ## What's built so far
 
@@ -89,6 +89,11 @@
 - Run: `SentinelAI\venv\Scripts\python.exe -m streamlit run dashboard/app.py`
 - Tests: `tests/test_dashboard.py` (4 tests)
 
+### Level 12 — Documentation & Deployment (DONE)
+- Rewrote `README.md` with overview, quickstart, CLI + dashboard usage, full pipeline diagram, project structure, and notes.
+- Finalized `requirements.txt`, `.gitignore`, `pyproject.toml`.
+- Full test suite: 66 tests passing. Committed and pushed to GitHub.
+
 ## Environment / How to run
 
 - **Python:** `py` launcher (Python 3.14.6). Installed deps: scapy, pandas, numpy, pytest, scikit-learn, shap, streamlit.
@@ -107,10 +112,10 @@
 
 ## Next actions (when resuming)
 
-1. **Level 12 — Documentation & Deployment:**
-   - Write a proper README (features, quickstart, architecture, CLI + dashboard usage).
-   - Add API/server (fastapi) or containerization notes; finalize `.gitignore`/`requirements.txt`.
-2. Final review: run full test suite, verify dashboard, ensure PROGRESS is current, tag the release.
+**All 12 levels complete.** Suggested next steps if continuing development:
+- Train on real labeled PCAP data (replace synthetic placeholder).
+- Add FastAPI backend + SQLAlchemy persistence (deps already in requirements.txt).
+- Containerize with Docker / deploy the Streamlit dashboard.
 
 ## Scratch / decisions log
 
@@ -125,3 +130,4 @@
 - 2026-09-02: Built Level 9 MITRE ATT&CK mapping (rule→technique catalog, verdict/incident annotation) + 8 tests. All 57 tests passing. Added rule_names to ThreatVerdict. Port-scan scenario maps to T1046+T1498.
 - 2026-09-02: Built Level 10 Explainable AI (SHAP global importance + local explanations). Installed shap. All 62 tests passing. Added `--explain` CLI mode.
 - 2026-09-02: Built Level 11 SOC Dashboard (Streamlit app + src/dashboard pipeline reusing full analysis chain). Installed streamlit. All 66 tests passing. `python -m streamlit run dashboard/app.py` launches successfully.
+- 2026-09-02: Built Level 12 Documentation & Deployment (rewrote README.md, finalized requirements/gitignore/pyproject). All 12 levels complete. All 66 tests passing. Project complete.
