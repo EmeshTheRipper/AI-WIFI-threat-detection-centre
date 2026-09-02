@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 
 from src.capture import PcapReader, parse_packet, parse_packets
-from src.detection import RuleEngine
+from src.detection import HybridEngine, RuleEngine
 from src.features import build_features_from_pcap, flow_summary
 from src.ml import ModelPredictor, ModelTrainer, generate_synthetic_flows
 
@@ -75,7 +75,7 @@ def predict_pcap(filepath: str):
 
 
 def analyze_pcap(filepath: str) -> int:
-    """Read a PCAP file and print packet summaries."""
+    """Read a PCAP file and run hybrid detection."""
     logger = logging.getLogger(__name__)
     logger.info("Analyzing PCAP: %s", filepath)
 
@@ -97,26 +97,21 @@ def analyze_pcap(filepath: str) -> int:
     logger.info("Parsed %d/%d packets", len(records), len(packets))
 
     print("\n[FEATURES] Building flow features...")
-    df_encoded, summary = build_features_from_pcap(filepath)
-    print(f"  Raw records parsed : {summary['raw_records']}")
+    df_raw, summary = build_features_from_pcap(filepath, encode=False)
     print(f"  Flows grouped      : {summary['flows']}")
-    print(f"  Feature matrix     : {summary['shape'][0]} rows x {summary['shape'][1]} cols")
-
-    df_raw, _ = build_features_from_pcap(filepath, encode=False)
     print(f"  Summary            : {flow_summary(df_raw)}")
 
-    print("\n[DETECTION] Running rule-based threat detection...")
-    engine = RuleEngine()
-    alerts = engine.analyze(df_raw)
-    stats = engine.summary(alerts)
-    print(f"  Rules evaluated    : {len(engine.rules)}")
-    print(f"  Alerts generated   : {stats['total']}")
-    if stats["by_severity"]:
-        print(f"  By severity        : {stats['by_severity']}")
-    if stats["by_rule"]:
-        print(f"  By rule            : {stats['by_rule']}")
-    for alert in alerts:
-        print(f"  {alert.summary()}")
+    print("\n[DETECTION] Running hybrid detection...")
+    model_path = "models/sentinel_model.joblib"
+    engine = HybridEngine(model_path=model_path if Path(model_path).exists() else None)
+    verdicts = engine.analyze(df_raw)
+    stats = engine.summary(verdicts)
+
+    print(f"  Total verdicts     : {stats['total']}")
+    print(f"  By verdict         : {stats['by_verdict']}")
+    print()
+    for v in verdicts:
+        print(f"  {v.summary()}")
 
     return len(records)
 
@@ -132,7 +127,7 @@ def main():
 
     print("\n[SENTINEL] SentinelAI - Threat Detection System")
     print("=" * 50)
-    print("Level 5: Machine Learning Fundamentals loaded\n")
+    print("Level 6: Hybrid Detection loaded\n")
 
     if len(sys.argv) > 1:
         cmd = sys.argv[1]

@@ -80,14 +80,23 @@ class ModelTrainer:
         return self.model.predict_proba(X)
 
     def _get_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        if self._feature_columns is not None:
-            available = [c for c in self._feature_columns if c in df.columns]
+        fitted = getattr(self.model, "feature_names_in_", None)
+        if fitted is not None:
+            expected = list(fitted)
+        elif self._feature_columns is not None:
+            expected = self._feature_columns
         else:
-            available = [c for c in FEATURE_COLUMNS if c in df.columns]
+            expected = FEATURE_COLUMNS
+
+        available = [c for c in expected if c in df.columns]
         if not available:
             raise ValueError("No recognized feature columns found in DataFrame")
-        self._feature_columns = available
-        return df[available].copy()
+        self._feature_columns = expected
+        X = df[available].copy()
+        missing = [c for c in expected if c not in X.columns]
+        for col in missing:
+            X[col] = 0
+        return X[expected]
 
     def save(self, model_path: str, metadata: dict | None = None):
         path = Path(model_path)
