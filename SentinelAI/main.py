@@ -204,6 +204,8 @@ def main():
             predict_pcap(sys.argv[2])
         elif cmd == "--explain" and len(sys.argv) > 2:
             explain_model(sys.argv[2])
+        elif cmd == "--api":
+            run_api()
         else:
             analyze_pcap(cmd)
     else:
@@ -211,7 +213,16 @@ def main():
         print("  python main.py <file.pcap>           — Analyze PCAP (rules + ML)")
         print("  python main.py --train               — Train model on synthetic data")
         print("  python main.py --predict <file.pcap> — Predict using saved model")
-        print("  python main.py --explain <file.pcap> — SHAP explanations on flows\n")
+        print("  python main.py --explain <file.pcap> — SHAP explanations on flows")
+        print("  python main.py --api                 — Start FastAPI backend (port 8000)\n")
+
+
+def run_api(host: str = "0.0.0.0", port: int = 8000) -> None:
+    """Start the FastAPI backend with uvicorn."""
+    import uvicorn
+
+    print(f"[API] Starting SentinelAI API on http://{host}:{port}")
+    uvicorn.run("src.api.server:app", host=host, port=port, reload=False)
 
 
 if __name__ == "__main__":

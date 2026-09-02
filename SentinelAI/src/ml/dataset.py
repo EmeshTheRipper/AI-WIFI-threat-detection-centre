@@ -128,3 +128,56 @@ def load_csv_dataset(path: str) -> pd.DataFrame:
         raise ValueError(f"Dataset at {path} must contain a 'label' column")
     logger.info("Loaded CSV dataset: %d rows from %s", len(df), path)
     return df
+
+
+def label_encoded_features(
+    features: pd.DataFrame,
+    labels: dict | pd.Series | list | int,
+) -> pd.DataFrame:
+    """Attach a label column to an encoded features DataFrame for training.
+
+    ``labels`` may be:
+    - a dict/Series mapping a key column (e.g. 'src_ip:dst_ip:dst_port') to 0/1
+    - a list/array of labels with the same length as ``features``
+    - a single int (0/1) applied to every row
+
+    Returns a copy of ``features`` with the ``label`` column present, dropping
+    any non-numeric identifier columns so it is ready for ``ModelTrainer``.
+    """
+    result = features.copy()
+    id_cols = [c for c in ["src_ip", "dst_ip"] if c in result.columns]
+
+    if isinstance(labels, dict):
+        key = None
+        for candidate in ["flow_key", "key"]:
+            if candidate in result.columns:
+                key = candidate
+                break
+        if key is None and id_cols:
+            key = "__flow_key__"
+            result[key] = (
+                result["src_ip"].astype(str) + ":" +
+                result["dst_ip"].astype(str) + ":" +
+                result["dst_port"].astype(str)
+            )
+        if key is None:
+            raise ValueError("labels dict requires a key column (flow_key) or src/dst IP columns")
+        result["label"] = result[key].map(labels)
+        if result["label"].isna().any():
+            raise ValueError("Some rows have no matching label in the provided mapping")
+        if key != "__flow_key__":
+            result = result.drop(columns=[key])
+    elif isinstance(labels, (list, pd.Series, np.ndarray)):
+        result["label"] = list(labels)
+        if len(result["label"]) != len(result):
+            raise ValueError("labels list length must match number of rows")
+    else:
+        result["label"] = int(labels)
+
+    # Drop identifier columns that are not part of the feature vectors.
+    for col in id_cols:
+        if col in result.columns:
+            result = result.drop(columns=[col])
+
+    result["label"] = result["label"].astype(int)
+    return result

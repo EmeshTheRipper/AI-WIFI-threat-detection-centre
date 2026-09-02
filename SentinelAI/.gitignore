@@ -41,3 +41,6 @@ reports/*.pdf
 .DS_Store
 Thumbs.db
 ~$*
+
+# Databasesentinelai.db
+*.db

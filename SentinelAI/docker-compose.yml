@@ -1,0 +1,16 @@
+services:
+  api:
+    build: .
+    image: sentinelai:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - sentinelai_data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  sentinelai_data:

@@ -5,8 +5,8 @@
 ## Current Status
 
 - **Last updated:** 2026-09-02
-- **Current level:** Level 12 — Documentation & Deployment (COMPLETE — all 12 levels done)
-- **Last commit:** `fc2eb5c` — Level 12: Documentation & Deployment
+- **Current level:** All 12 levels complete + Backend API, Database, Real-data training support, Docker deployment
+- **Last commit:** `64adc38` — Backend API + DB + labeling + Docker
 - **Branch:** `main` (pushed to GitHub)
 
 ## Learning Levels
@@ -94,6 +94,15 @@
 - Finalized `requirements.txt`, `.gitignore`, `pyproject.toml`.
 - Full test suite: 66 tests passing. Committed and pushed to GitHub.
 
+### Extension — Backend API + Persistence + Deployment (DONE)
+- Installed fastapi, uvicorn, sqlalchemy, python-dotenv, httpx.
+- `src/db/database.py` — SQLAlchemy models (`Analysis`, `Incident`) + `Database` repository with SQLite persistence (`sentinelai.db`).
+- `src/api/server.py` — FastAPI app: `/health`, `POST /analyze`, `GET /analyze/default`, `GET /incidents`, `GET /analyses`; interactive docs at `/docs`.
+- `python main.py --api` starts the server on port 8000.
+- Real-data training support: `label_encoded_features()` in `src/ml/dataset.py` (attach labels by list/scalar/src:dst:port dict) + `load_csv_dataset()`.
+- Docker: `Dockerfile`, `docker-compose.yml` (port 8000 + healthcheck), `.dockerignore`.
+- Tests: `tests/test_db.py` (3), `tests/test_api.py` (6), `tests/test_dataset_labels.py` (5). Full suite: **80 tests passing**.
+
 ## Environment / How to run
 
 - **Python:** `py` launcher (Python 3.14.6). Installed deps: scapy, pandas, numpy, pytest, scikit-learn, shap, streamlit.
@@ -112,10 +121,10 @@
 
 ## Next actions (when resuming)
 
-**All 12 levels complete.** Suggested next steps if continuing development:
-- Train on real labeled PCAP data (replace synthetic placeholder).
-- Add FastAPI backend + SQLAlchemy persistence (deps already in requirements.txt).
-- Containerize with Docker / deploy the Streamlit dashboard.
+**All 12 levels complete + backend/deployment built.** Optional future work:
+- Feed a real labeled PCAP dataset into `data/datasets/` and retrain the model
+  (synthetic placeholder currently over-flags benign traffic).
+- Add auth to the API, connect a real Postgres DB, or deploy to a cloud host.
 
 ## Scratch / decisions log
 
@@ -131,3 +140,4 @@
 - 2026-09-02: Built Level 10 Explainable AI (SHAP global importance + local explanations). Installed shap. All 62 tests passing. Added `--explain` CLI mode.
 - 2026-09-02: Built Level 11 SOC Dashboard (Streamlit app + src/dashboard pipeline reusing full analysis chain). Installed streamlit. All 66 tests passing. `python -m streamlit run dashboard/app.py` launches successfully.
 - 2026-09-02: Built Level 12 Documentation & Deployment (rewrote README.md, finalized requirements/gitignore/pyproject). All 12 levels complete. All 66 tests passing. Project complete.
+- 2026-09-02: Built FastAPI backend (src/api), SQLAlchemy persistence (src/db), real-labeled-data training support (label_encoded_features), and Docker deployment (Dockerfile/docker-compose). Installed fastapi/uvicorn/sqlalchemy/httpx. Added `--api` CLI. All 80 tests passing.

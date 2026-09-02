@@ -12,6 +12,8 @@ SentinelAI is a cybersecurity platform that analyzes WiFi network traffic (PCAP 
 - MITRE ATT&CK technique mapping
 - Explainable AI (SHAP) for model predictions
 - Interactive SOC Dashboard (Streamlit)
+- FastAPI backend + SQLAlchemy persistence
+- Docker deployment
 
 ## Project Status
 
@@ -66,6 +68,34 @@ Opens an interactive dashboard with KPIs, risk-level distribution, scored
 incident table, and MITRE summaries. Edit the PCAP path in the app to analyze
 a different capture.
 
+### FastAPI backend
+
+```bash
+# Option A: via the CLI
+python main.py --api
+
+# Option B: directly with uvicorn
+uvicorn src.api.server:app --host 0.0.0.0 --port 8000
+```
+
+Interactive docs at `http://localhost:8000/docs`. Endpoints:
+- `GET /health` — service status
+- `POST /analyze` — analyze a PCAP, returns + persists risk-scored incidents
+- `GET /analyze/default` — analyze the bundled sample PCAP
+- `GET /incidents?analysis_id=N` — query stored incidents
+- `GET /analyses` — list stored analyses
+
+Results are persisted to a SQLite database (`sentinelai.db`) via SQLAlchemy.
+
+### Docker deployment
+
+```bash
+docker compose up --build
+```
+
+Builds and runs the API server on port 8000 with a persistent data volume.
+Healthcheck hits `/health`.
+
 ### Run tests
 
 ```bash
@@ -97,6 +127,29 @@ PCAP capture ──> Feature extraction ──> Rule detection ─┐
 - **Explainability** (`src/explainability/`): SHAP global feature importance +
   per-sample local explanations.
 - **Dashboard** (`src/dashboard/` + `dashboard/app.py`): data pipeline + UI.
+- **Backend** (`src/api/` + `src/db/`): FastAPI HTTP endpoints + SQLAlchemy
+  persistence of analyses and incidents.
+
+### Training on real labeled data
+
+The bundled model trains on synthetic data (a placeholder). To train on real
+labeled flows, prepare a CSV with the feature columns plus a `label` column
+(0 = normal, 1 = attack) and pass it to the trainer:
+
+```python
+from src.ml.dataset import load_csv_dataset
+from src.ml.trainer import ModelTrainer
+
+df = load_csv_dataset("data/datasets/my_labeled.csv")
+trainer = ModelTrainer()
+trainer.train(df)
+trainer.save("models/sentinel_model.joblib", metadata={"source": "real-labeled"})
+```
+
+For per-flow labels over PCAP-derived features, use
+`label_encoded_features(features_df, labels)` in `src.ml.dataset` to attach a
+label column (by list, scalar, or a dict keyed on source:dest:port) before
+training.
 
 ## Project Structure
 
