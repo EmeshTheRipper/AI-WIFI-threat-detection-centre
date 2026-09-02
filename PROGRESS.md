@@ -121,10 +121,11 @@
 
 ## Next actions (when resuming)
 
-**All 12 levels complete + backend/deployment built.** Optional future work:
-- Feed a real labeled PCAP dataset into `data/datasets/` and retrain the model
-  (synthetic placeholder currently over-flags benign traffic).
-- Add auth to the API, connect a real Postgres DB, or deploy to a cloud host.
+**All 12 levels complete + backend/deployment built.** See
+`SentinelAI/docs/FUTURE_WORK.md` for a full list of optional next steps.
+Top suggestions: train on real labeled data, add API auth / switch to
+Postgres, and enhance the dashboard with SHAP visualizations and historical
+DB views.
 
 ## Scratch / decisions log
 
