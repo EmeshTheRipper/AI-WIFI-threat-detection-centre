@@ -194,7 +194,7 @@ def main():
 
     print("\n[SENTINEL] SentinelAI - Threat Detection System")
     print("=" * 50)
-    print("Level 10: Explainable AI loaded\n")
+    print("Hybrid IDS: rules + ML + correlation + risk + MITRE + XAI\n")
 
     if len(sys.argv) > 1:
         cmd = sys.argv[1]
