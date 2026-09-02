@@ -5,8 +5,8 @@
 ## Current Status
 
 - **Last updated:** 2026-09-02
-- **Current level:** Level 4 — Rule-Based Threat Detection (NOT STARTED)
-- **Last commit:** `6208c97` — Level 3: feature engineering
+- **Current level:** Level 5 — Machine Learning Fundamentals (NOT STARTED)
+- **Last commit:** `940bb0c` — Level 4: rule-based detection
 - **Branch:** `main` (pushed to GitHub)
 
 ## Learning Levels
@@ -16,7 +16,7 @@
 | 1 | Python & Project Fundamentals | ✅ DONE |
 | 2 | Networking & PCAP Fundamentals | ✅ DONE |
 | 3 | Data Processing & Feature Engineering | ✅ DONE |
-| 4 | Rule-Based Threat Detection | ⬜ NOT STARTED |
+| 4 | Rule-Based Threat Detection | ✅ DONE |
 | 5 | Machine Learning Fundamentals | ⬜ NOT STARTED |
 | 6 | Hybrid Detection | ⬜ NOT STARTED |
 | 7 | Event Correlation | ⬜ NOT STARTED |
@@ -40,6 +40,12 @@
 - `src/features/dataset.py` — `build_features_from_pcap()` (full pipeline)
 - Tests: `tests/test_features.py` (6 tests), `tests/fixtures.py`
 
+### Level 4 — Rule-Based Threat Detection (DONE)
+- `src/detection/alerts.py` — `ThreatAlert` dataclass (severity, confidence, evidence)
+- `src/detection/rules.py` — `BaseRule` ABC + `PortScanRule`, `SynFloodRule`, `PingSweepRule`
+- `src/detection/engine.py` — `RuleEngine` (applies rules, sorts by severity, summary stats)
+- Tests: `tests/test_detection.py` (7 tests)
+
 ## Environment / How to run
 
 - **Python:** `py` launcher (Python 3.14.6). Installed deps: scapy, pandas, numpy, pytest.
@@ -57,15 +63,15 @@
 
 ## Next actions (when resuming)
 
-1. **Level 4 — Rule-Based Threat Detection:**
-   - Create `src/detection/rules.py` — rule engine + built-in rules (e.g. port scan, SYN flood, ping sweep) that score flow features.
-   - Create `src/detection/` supporting files, update `src/detection/__init__.py`.
-   - Write `tests/test_detection.py`.
-   - Update `main.py` to run detection over the feature DataFrame.
-2. Install `scikit-learn` and `shap` before Level 5 (ML).
+1. **Level 5 — Machine Learning Fundamentals:**
+   - Install `scikit-learn` (`pip install scikit-learn`).
+   - Create `src/ml/` module — train/test split, model training (Random Forest / SVM), evaluation metrics.
+   - Integrate ML predictions with rule-based alerts.
+2. Install `shap` before Level 10 (Explainable AI).
 
 ## Scratch / decisions log
 
 - 2026-09-02: Project scaffolded, git initialized, created root `.gitignore` (ignores `logs/`, `~$*`).
 - 2026-09-02: Built Level 2 capture module (parser/reader/sniffer) + tests.
 - 2026-09-02: Built Level 3 feature engineering module + tests. Fixed ICMP flows being dropped (fixed by allowing port-less ICMP flows).
+- 2026-09-02: Built Level 4 rule-based detection module (PortScan, SYN Flood, Ping Sweep rules) + 7 tests. Rules use configurable thresholds, alerts sorted by severity. All 17 tests passing.
