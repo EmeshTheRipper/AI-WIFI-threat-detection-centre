@@ -35,6 +35,7 @@ class ThreatVerdict:
     verdict: str
     combined_confidence: float
     reasons: list[str] = field(default_factory=list)
+    rule_names: list[str] = field(default_factory=list)
 
     def summary(self) -> str:
         tag = {"normal": "OK", "suspicious": "???", "malicious": "!!!"}[self.verdict]
@@ -69,6 +70,7 @@ class HybridEngine:
     def analyze(self, df: pd.DataFrame) -> list[ThreatVerdict]:
         rule_alerts = self.rule_engine.analyze(df)
         alert_map = self._build_alert_map(rule_alerts)
+        rule_names_map = self._build_rule_names_map(rule_alerts)
 
         predictor = self._get_predictor()
         if predictor:
@@ -111,6 +113,7 @@ class HybridEngine:
                 verdict=verdict,
                 combined_confidence=combined_conf,
                 reasons=reasons,
+                rule_names=list(rule_names_map.get(src_ip, [])),
             ))
 
         logger.info("Hybrid analysis complete: %d verdicts", len(verdicts))
@@ -162,3 +165,9 @@ class HybridEngine:
             if existing is None or SEVERITY_ORDER[alert.severity] > SEVERITY_ORDER[existing.severity]:
                 best[alert.src_ip] = alert
         return best
+
+    def _build_rule_names_map(self, alerts: list[ThreatAlert]) -> dict[str, set]:
+        names: dict[str, set] = {}
+        for alert in alerts:
+            names.setdefault(alert.src_ip, set()).add(alert.rule_name)
+        return {k: v for k, v in names.items()}

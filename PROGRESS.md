@@ -5,8 +5,8 @@
 ## Current Status
 
 - **Last updated:** 2026-09-02
-- **Current level:** Level 9 — MITRE ATT&CK Mapping (NOT STARTED)
-- **Last commit:** `eca85e0` — Level 8: risk scoring
+- **Current level:** Level 10 — Explainable AI (NOT STARTED)
+- **Last commit:** `2ac5dc2` — Level 9: MITRE ATT&CK mapping
 - **Branch:** `main` (pushed to GitHub)
 
 ## Learning Levels
@@ -21,7 +21,7 @@
 | 6 | Hybrid Detection | ✅ DONE |
 | 7 | Event Correlation | ✅ DONE |
 | 8 | Risk Scoring | ✅ DONE |
-| 9 | MITRE ATT&CK Mapping | ⬜ NOT STARTED |
+| 9 | MITRE ATT&CK Mapping | ✅ DONE |
 | 10 | Explainable AI | ⬜ NOT STARTED |
 | 11 | SOC Dashboard | ⬜ NOT STARTED |
 | 12 | Professional Engineering | ⬜ NOT STARTED |
@@ -70,6 +70,12 @@
 - Levels: minimal <20, low <40, medium <60, high <80, critical >=80
 - Tests: `tests/test_risk.py` (8 tests)
 
+### Level 9 — MITRE ATT&CK Mapping (DONE)
+- `src/mitre/mappings.py` — `Technique`, per-rule technique catalog, `annotate_verdict`/`annotate_incident`/`describe`
+- Port Scan → T1046 (Discovery), SYN Flood → T1498 (Impact), Ping Sweep → T1018 (Discovery), malicious → T1190
+- Added `rule_names` to `ThreatVerdict` so verdicts carry the rules that fired
+- Tests: `tests/test_mitre.py` (8 tests)
+
 ## Environment / How to run
 
 - **Python:** `py` launcher (Python 3.14.6). Installed deps: scapy, pandas, numpy, pytest, scikit-learn.
@@ -87,10 +93,11 @@
 
 ## Next actions (when resuming)
 
-1. **Level 9 — MITRE ATT&CK Mapping:**
-   - Map detected behaviors/rules to MITRE ATT&CK techniques/tactics.
-   - Create `src/attackmap/mappings.py` (or inside detection).
-2. Install `shap` before Level 10 (Explainable AI).
+1. **Level 10 — Explainable AI:**
+   - Install `shap`.
+   - Add feature importance / per-prediction explanations for the ML model.
+   - Create `src/explainability/explainer.py`.
+2. Install `streamlit` before Level 11 (SOC Dashboard).
 
 ## Scratch / decisions log
 
@@ -102,3 +109,4 @@
 - 2026-09-02: Built Level 6 hybrid detection (HybridEngine merging rules + ML into per-flow verdicts) + 8 tests. Fixed ML feature-alignment bug (missing one-hot proto columns). All 33 tests passing. Note: synthetic-trained ML flags sample PCAP as suspicious — expected until real labeled data.
 - 2026-09-02: Built Level 7 event correlation (Correlator grouping verdicts into per-source incidents, criticality heuristics) + 8 tests. All 41 tests passing. Output groups 51 incidents from sample PCAP, flags 10.0.0.2 as critical.
 - 2026-09-02: Built Level 8 risk scoring (weighted 0-100 score + risk levels) + 8 tests. All 49 tests passing. Sample PCAP: 10.0.0.2 scored 45 (medium), rest low.
+- 2026-09-02: Built Level 9 MITRE ATT&CK mapping (rule→technique catalog, verdict/incident annotation) + 8 tests. All 57 tests passing. Added rule_names to ThreatVerdict. Port-scan scenario maps to T1046+T1498.
