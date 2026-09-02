@@ -1,0 +1,61 @@
+{
+  "accuracy": 1.0,
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1": 1.0,
+  "confusion_matrix": [
+    [
+      100,
+      0
+    ],
+    [
+      0,
+      30
+    ]
+  ],
+  "classification_report": {
+    "normal": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 100.0
+    },
+    "attack": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 30.0
+    },
+    "accuracy": 1.0,
+    "macro avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 130.0
+    },
+    "weighted avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 130.0
+    }
+  },
+  "train_size": 520,
+  "test_size": 130,
+  "feature_columns": [
+    "src_port",
+    "dst_port",
+    "packets",
+    "total_bytes",
+    "min_size",
+    "max_size",
+    "mean_size",
+    "std_size",
+    "total_payload",
+    "mean_payload",
+    "syn_packets",
+    "rst_packets",
+    "proto_TCP",
+    "proto_UDP"
+  ]
+}

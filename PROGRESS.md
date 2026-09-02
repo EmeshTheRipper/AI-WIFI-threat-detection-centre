@@ -5,8 +5,8 @@
 ## Current Status
 
 - **Last updated:** 2026-09-02
-- **Current level:** Level 5 — Machine Learning Fundamentals (NOT STARTED)
-- **Last commit:** `940bb0c` — Level 4: rule-based detection
+- **Current level:** Level 6 — Hybrid Detection (NOT STARTED)
+- **Last commit:** `3b9191b` — Level 5: ML fundamentals
 - **Branch:** `main` (pushed to GitHub)
 
 ## Learning Levels
@@ -17,7 +17,7 @@
 | 2 | Networking & PCAP Fundamentals | ✅ DONE |
 | 3 | Data Processing & Feature Engineering | ✅ DONE |
 | 4 | Rule-Based Threat Detection | ✅ DONE |
-| 5 | Machine Learning Fundamentals | ⬜ NOT STARTED |
+| 5 | Machine Learning Fundamentals | ✅ DONE |
 | 6 | Hybrid Detection | ⬜ NOT STARTED |
 | 7 | Event Correlation | ⬜ NOT STARTED |
 | 8 | Risk Scoring | ⬜ NOT STARTED |
@@ -46,9 +46,16 @@
 - `src/detection/engine.py` — `RuleEngine` (applies rules, sorts by severity, summary stats)
 - Tests: `tests/test_detection.py` (7 tests)
 
+### Level 5 — Machine Learning Fundamentals (DONE)
+- `src/ml/dataset.py` — Synthetic flow generator (normal/attack patterns) + CSV loader
+- `src/ml/trainer.py` — `ModelTrainer` (RandomForest, train/eval/save/load, metrics)
+- `src/ml/predictor.py` — `ModelPredictor` (load model, classify flows, summary)
+- Tests: `tests/test_ml.py` (8 tests)
+- NOTE: Trained on synthetic data; needs real labeled PCAP data for production use
+
 ## Environment / How to run
 
-- **Python:** `py` launcher (Python 3.14.6). Installed deps: scapy, pandas, numpy, pytest.
+- **Python:** `py` launcher (Python 3.14.6). Installed deps: scapy, pandas, numpy, pytest, scikit-learn.
 - **Venv:** exists at `SentinelAI/venv/` (activated via `SentinelAI\venv\Scripts\activate`).
 - **Run app:** `SentinelAI\venv\Scripts\python.exe main.py data/samples/level2_sample.pcap`
 - **Run tests:** `SentinelAI\venv\Scripts\python.exe -m pytest -v`
@@ -63,10 +70,9 @@
 
 ## Next actions (when resuming)
 
-1. **Level 5 — Machine Learning Fundamentals:**
-   - Install `scikit-learn` (`pip install scikit-learn`).
-   - Create `src/ml/` module — train/test split, model training (Random Forest / SVM), evaluation metrics.
-   - Integrate ML predictions with rule-based alerts.
+1. **Level 6 — Hybrid Detection:**
+   - Combine rule-based alerts + ML predictions into a unified verdict system.
+   - Create `src/detection/hybrid.py` — merge engine that weights both signal sources.
 2. Install `shap` before Level 10 (Explainable AI).
 
 ## Scratch / decisions log
@@ -75,3 +81,4 @@
 - 2026-09-02: Built Level 2 capture module (parser/reader/sniffer) + tests.
 - 2026-09-02: Built Level 3 feature engineering module + tests. Fixed ICMP flows being dropped (fixed by allowing port-less ICMP flows).
 - 2026-09-02: Built Level 4 rule-based detection module (PortScan, SYN Flood, Ping Sweep rules) + 7 tests. Rules use configurable thresholds, alerts sorted by severity. All 17 tests passing.
+- 2026-09-02: Built Level 5 ML module (synthetic data generator, RandomForest trainer, predictor) + 8 tests. Installed scikit-learn. All 25 tests passing. Model saves/loads correctly. Synthetic data is a placeholder until real labeled captures are available.

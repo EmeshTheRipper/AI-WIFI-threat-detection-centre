@@ -12,6 +12,7 @@ from pathlib import Path
 from src.capture import PcapReader, parse_packet, parse_packets
 from src.detection import RuleEngine
 from src.features import build_features_from_pcap, flow_summary
+from src.ml import ModelPredictor, ModelTrainer, generate_synthetic_flows
 
 
 def setup_logging():
@@ -27,6 +28,50 @@ def setup_logging():
             logging.StreamHandler(sys.stdout),
         ],
     )
+
+
+def train_model():
+    print("\n[ML] Training model on synthetic data...")
+    df = generate_synthetic_flows(n_normal=500, n_attack=150)
+    print(f"  Dataset: {len(df)} flows ({(df['label']==0).sum()} normal, {(df['label']==1).sum()} attack)")
+
+    trainer = ModelTrainer()
+    metrics = trainer.train(df)
+
+    print(f"  Accuracy  : {metrics['accuracy']:.2%}")
+    print(f"  Precision : {metrics['precision']:.2%}")
+    print(f"  Recall    : {metrics['recall']:.2%}")
+    print(f"  F1 Score  : {metrics['f1']:.2%}")
+
+    model_path = "models/sentinel_model.joblib"
+    trainer.save(model_path, metadata=metrics)
+    print(f"\n  Model saved to {model_path}")
+
+
+def predict_pcap(filepath: str):
+    model_path = "models/sentinel_model.joblib"
+    if not Path(model_path).exists():
+        print(f"  No trained model found at {model_path}. Run --train first.")
+        return
+
+    print(f"\n[ML] Loading model from {model_path}...")
+    predictor = ModelPredictor.from_model(model_path)
+
+    print(f"[ML] Extracting features from {filepath}...")
+    df, _ = build_features_from_pcap(filepath, encode=True)
+
+    result = predictor.classify(df)
+    summary = predictor.summary(result)
+
+    print(f"  Total flows  : {summary['total']}")
+    print(f"  Predictions  : {summary['counts']}")
+    print(f"  Avg confidence: {summary['avg_confidence']:.2%}")
+
+    attacks = result[result["prediction"] == 1]
+    if not attacks.empty:
+        print(f"\n  Suspicious flows ({len(attacks)}):")
+        for _, row in attacks.head(10).iterrows():
+            print(f"    confidence={row['confidence']:.0%} packets={int(row.get('packets', 0))}")
 
 
 def analyze_pcap(filepath: str) -> int:
@@ -87,13 +132,21 @@ def main():
 
     print("\n[SENTINEL] SentinelAI - Threat Detection System")
     print("=" * 50)
-    print("Level 4: Rule-Based Threat Detection loaded\n")
+    print("Level 5: Machine Learning Fundamentals loaded\n")
 
     if len(sys.argv) > 1:
-        analyze_pcap(sys.argv[1])
+        cmd = sys.argv[1]
+        if cmd == "--train":
+            train_model()
+        elif cmd == "--predict" and len(sys.argv) > 2:
+            predict_pcap(sys.argv[2])
+        else:
+            analyze_pcap(cmd)
     else:
-        print("Usage: python main.py <path/to/file.pcap>")
-        print("Offline PCAP analysis ready. Pass a PCAP file to analyze traffic.\n")
+        print("Usage:")
+        print("  python main.py <file.pcap>           — Analyze PCAP (rules + ML)")
+        print("  python main.py --train               — Train model on synthetic data")
+        print("  python main.py --predict <file.pcap> — Predict using saved model\n")
 
 
 if __name__ == "__main__":
