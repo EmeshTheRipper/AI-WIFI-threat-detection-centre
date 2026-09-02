@@ -6,7 +6,7 @@
 
 - **Last updated:** 2026-09-02
 - **Current level:** Level 11 — SOC Dashboard (NOT STARTED)
-- **Last commit:** `485cd1a` — Level 10: Explainable AI
+- **Last commit:** `0c52e5a` — Level 10: Explainable AI
 - **Branch:** `main` (pushed to GitHub)
 
 ## Learning Levels
