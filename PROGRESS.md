@@ -5,8 +5,8 @@
 ## Current Status
 
 - **Last updated:** 2026-09-02
-- **Current level:** Level 11 — SOC Dashboard (NOT STARTED)
-- **Last commit:** `0c52e5a` — Level 10: Explainable AI
+- **Current level:** Level 12 — Documentation & Deployment (NOT STARTED)
+- **Last commit:** `dae161a` — Level 11: SOC Dashboard
 - **Branch:** `main` (pushed to GitHub)
 
 ## Learning Levels
@@ -23,7 +23,7 @@
 | 8 | Risk Scoring | ✅ DONE |
 | 9 | MITRE ATT&CK Mapping | ✅ DONE |
 | 10 | Explainable AI | ✅ DONE |
-| 11 | SOC Dashboard | ⬜ NOT STARTED |
+| 11 | SOC Dashboard | ✅ DONE |
 | 12 | Professional Engineering | ⬜ NOT STARTED |
 
 ## What's built so far
@@ -82,13 +82,21 @@
 - `python main.py --explain <file.pcap>` added
 - Tests: `tests/test_explainability.py` (5 tests)
 
+### Level 11 — SOC Dashboard (DONE)
+- Installed `streamlit`.
+- `src/dashboard/pipeline.py` — `analyze()`, `to_summary_frame()`, `level_distribution()` (reuses full analysis chain)
+- `dashboard/app.py` — Streamlit app (KPIs, risk-level bar chart, scored-incident table, MITRE summary)
+- Run: `SentinelAI\venv\Scripts\python.exe -m streamlit run dashboard/app.py`
+- Tests: `tests/test_dashboard.py` (4 tests)
+
 ## Environment / How to run
 
-- **Python:** `py` launcher (Python 3.14.6). Installed deps: scapy, pandas, numpy, pytest, scikit-learn.
+- **Python:** `py` launcher (Python 3.14.6). Installed deps: scapy, pandas, numpy, pytest, scikit-learn, shap, streamlit.
 - **Venv:** exists at `SentinelAI/venv/` (activated via `SentinelAI\venv\Scripts\activate`).
 - **Run app:** `SentinelAI\venv\Scripts\python.exe main.py data/samples/level2_sample.pcap`
+- **Run dashboard:** `SentinelAI\venv\Scripts\python.exe -m streamlit run dashboard/app.py`
 - **Run tests:** `SentinelAI\venv\Scripts\python.exe -m pytest -v`
-- **NOTE:** shap, streamlit, fastapi, sqlalchemy etc. are in `requirements.txt` but **NOT installed yet** (shap needed for Level 10, streamlit for Level 11).
+- **NOTE:** shap, streamlit now installed. fastapi, sqlalchemy still in `requirements.txt` NOT installed.
 - Sample data: `data/samples/level2_sample.pcap` (61 packets).
 
 ## Git notes
@@ -99,10 +107,10 @@
 
 ## Next actions (when resuming)
 
-1. **Level 11 — SOC Dashboard:**
-   - Install `streamlit`.
-   - Build an interactive dashboard showing risk scores, incidents, and ATT&CK mappings.
-2. Then Level 12 — Documentation & Deployment.
+1. **Level 12 — Documentation & Deployment:**
+   - Write a proper README (features, quickstart, architecture, CLI + dashboard usage).
+   - Add API/server (fastapi) or containerization notes; finalize `.gitignore`/`requirements.txt`.
+2. Final review: run full test suite, verify dashboard, ensure PROGRESS is current, tag the release.
 
 ## Scratch / decisions log
 
@@ -116,3 +124,4 @@
 - 2026-09-02: Built Level 8 risk scoring (weighted 0-100 score + risk levels) + 8 tests. All 49 tests passing. Sample PCAP: 10.0.0.2 scored 45 (medium), rest low.
 - 2026-09-02: Built Level 9 MITRE ATT&CK mapping (rule→technique catalog, verdict/incident annotation) + 8 tests. All 57 tests passing. Added rule_names to ThreatVerdict. Port-scan scenario maps to T1046+T1498.
 - 2026-09-02: Built Level 10 Explainable AI (SHAP global importance + local explanations). Installed shap. All 62 tests passing. Added `--explain` CLI mode.
+- 2026-09-02: Built Level 11 SOC Dashboard (Streamlit app + src/dashboard pipeline reusing full analysis chain). Installed streamlit. All 66 tests passing. `python -m streamlit run dashboard/app.py` launches successfully.
