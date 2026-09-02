@@ -1,1 +1,3 @@
-# Explainable AI module
+from .explainer import Explainer
+
+__all__ = ["Explainer"]

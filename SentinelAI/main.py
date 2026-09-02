@@ -150,6 +150,39 @@ def analyze_pcap(filepath: str) -> int:
     return len(records)
 
 
+def explain_model(filepath: str) -> None:
+    """Run SHAP explanations on flows from a PCAP using the saved model."""
+    model_path = "models/sentinel_model.joblib"
+    if not Path(model_path).exists():
+        print(f"  No trained model found at {model_path}. Run --train first.")
+        return
+
+    print(f"\n[XAI] Loading model from {model_path}...")
+    predictor = ModelPredictor.from_model(model_path)
+    model = predictor.trainer.model
+
+    print(f"[XAI] Extracting features from {filepath}...")
+    df, _ = build_features_from_pcap(filepath, encode=True)
+
+    columns = list(model.feature_names_in_) if hasattr(model, "feature_names_in_") else list(df.columns)
+    X = df[[c for c in df.columns if c in columns]]
+
+    from src.explainability import Explainer
+
+    explainer = Explainer(model)
+
+    print("\n[XAI] Global feature importance (mean |SHAP|):")
+    for i, row in enumerate(explainer.global_importance(X)):
+        print(f"  {i + 1:>2}. {row['feature']:<18} {row['importance']:.4f}")
+
+    print(f"\n[XAI] Local explanations for first {min(3, len(X))} flow(s):")
+    for i in range(min(3, len(X))):
+        expl = explainer.local_explanation(X, row_index=i)
+        print(f"  Flow {i}: predicted {expl['label_name']} (prob-shift base {expl['base_value']})")
+        for e in expl["driving_attack"]:
+            print(f"     +{e['shap']:<8} {e['feature']} (val={e['value']})")
+
+
 def main():
     """Main function - entry point of SentinelAI."""
     setup_logging()
@@ -161,7 +194,7 @@ def main():
 
     print("\n[SENTINEL] SentinelAI - Threat Detection System")
     print("=" * 50)
-    print("Level 9: MITRE ATT&CK Mapping loaded\n")
+    print("Level 10: Explainable AI loaded\n")
 
     if len(sys.argv) > 1:
         cmd = sys.argv[1]
@@ -169,13 +202,16 @@ def main():
             train_model()
         elif cmd == "--predict" and len(sys.argv) > 2:
             predict_pcap(sys.argv[2])
+        elif cmd == "--explain" and len(sys.argv) > 2:
+            explain_model(sys.argv[2])
         else:
             analyze_pcap(cmd)
     else:
         print("Usage:")
         print("  python main.py <file.pcap>           — Analyze PCAP (rules + ML)")
         print("  python main.py --train               — Train model on synthetic data")
-        print("  python main.py --predict <file.pcap> — Predict using saved model\n")
+        print("  python main.py --predict <file.pcap> — Predict using saved model")
+        print("  python main.py --explain <file.pcap> — SHAP explanations on flows\n")
 
 
 if __name__ == "__main__":

@@ -5,8 +5,8 @@
 ## Current Status
 
 - **Last updated:** 2026-09-02
-- **Current level:** Level 10 — Explainable AI (NOT STARTED)
-- **Last commit:** `2ac5dc2` — Level 9: MITRE ATT&CK mapping
+- **Current level:** Level 11 — SOC Dashboard (NOT STARTED)
+- **Last commit:** `485cd1a` — Level 10: Explainable AI
 - **Branch:** `main` (pushed to GitHub)
 
 ## Learning Levels
@@ -22,7 +22,7 @@
 | 7 | Event Correlation | ✅ DONE |
 | 8 | Risk Scoring | ✅ DONE |
 | 9 | MITRE ATT&CK Mapping | ✅ DONE |
-| 10 | Explainable AI | ⬜ NOT STARTED |
+| 10 | Explainable AI | ✅ DONE |
 | 11 | SOC Dashboard | ⬜ NOT STARTED |
 | 12 | Professional Engineering | ⬜ NOT STARTED |
 
@@ -76,6 +76,12 @@
 - Added `rule_names` to `ThreatVerdict` so verdicts carry the rules that fired
 - Tests: `tests/test_mitre.py` (8 tests)
 
+### Level 10 — Explainable AI (DONE)
+- Installed `shap`.
+- `src/explainability/explainer.py` — `Explainer` (global importance + per-sample local explanation + annotated dataframe), `__init__.py` export
+- `python main.py --explain <file.pcap>` added
+- Tests: `tests/test_explainability.py` (5 tests)
+
 ## Environment / How to run
 
 - **Python:** `py` launcher (Python 3.14.6). Installed deps: scapy, pandas, numpy, pytest, scikit-learn.
@@ -93,11 +99,10 @@
 
 ## Next actions (when resuming)
 
-1. **Level 10 — Explainable AI:**
-   - Install `shap`.
-   - Add feature importance / per-prediction explanations for the ML model.
-   - Create `src/explainability/explainer.py`.
-2. Install `streamlit` before Level 11 (SOC Dashboard).
+1. **Level 11 — SOC Dashboard:**
+   - Install `streamlit`.
+   - Build an interactive dashboard showing risk scores, incidents, and ATT&CK mappings.
+2. Then Level 12 — Documentation & Deployment.
 
 ## Scratch / decisions log
 
@@ -110,3 +115,4 @@
 - 2026-09-02: Built Level 7 event correlation (Correlator grouping verdicts into per-source incidents, criticality heuristics) + 8 tests. All 41 tests passing. Output groups 51 incidents from sample PCAP, flags 10.0.0.2 as critical.
 - 2026-09-02: Built Level 8 risk scoring (weighted 0-100 score + risk levels) + 8 tests. All 49 tests passing. Sample PCAP: 10.0.0.2 scored 45 (medium), rest low.
 - 2026-09-02: Built Level 9 MITRE ATT&CK mapping (rule→technique catalog, verdict/incident annotation) + 8 tests. All 57 tests passing. Added rule_names to ThreatVerdict. Port-scan scenario maps to T1046+T1498.
+- 2026-09-02: Built Level 10 Explainable AI (SHAP global importance + local explanations). Installed shap. All 62 tests passing. Added `--explain` CLI mode.
