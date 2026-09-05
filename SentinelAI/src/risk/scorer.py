@@ -7,7 +7,7 @@ signal agreement (rule AND ML). Provides human-readable risk levels.
 
 import logging
 from dataclasses import dataclass, field
-from typing import Iterable
+from typing import Iterable, Protocol, runtime_checkable
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +20,20 @@ RISK_LEVELS = [
 ]
 
 
+@runtime_checkable
+class Scorable(Protocol):
+    """Minimal interface the scorer needs from a correlated incident."""
+
+    src_ip: str
+    total_events: int
+    unique_targets: int
+    max_confidence: float
+    had_rule_and_ml: bool
+    malicious_events: int
+    suspicious_events: int
+    verdicts: list
+
+
 def risk_level(score: float) -> str:
     """Map a 0-100 risk score to a named level."""
     for name, threshold in RISK_LEVELS:
@@ -30,7 +44,7 @@ def risk_level(score: float) -> str:
 
 @dataclass
 class ScoredIncident:
-    incident: object
+    incident: Scorable
     score: float
     components: dict = field(default_factory=dict)
 
@@ -69,7 +83,7 @@ class RiskScorer:
             "agreement": w_agreement / total,
         }
 
-    def score(self, incident) -> ScoredIncident:
+    def score(self, incident: Scorable) -> ScoredIncident:
         components = {
             "confidence": self._confidence_score(incident),
             "volume": self._volume_score(incident),
@@ -91,27 +105,27 @@ class RiskScorer:
             components={k: round(v, 3) for k, v in components.items()},
         )
 
-    def score_all(self, incidents: Iterable) -> list[ScoredIncident]:
+    def score_all(self, incidents: Iterable[Scorable]) -> list[ScoredIncident]:
         scored = [self.score(i) for i in incidents]
         scored.sort(key=lambda s: -s.score)
         return scored
 
-    def _confidence_score(self, incident) -> float:
+    def _confidence_score(self, incident: Scorable) -> float:
         return min(incident.max_confidence * 100.0, 100.0)
 
-    def _volume_score(self, incident) -> float:
+    def _volume_score(self, incident: Scorable) -> float:
         events = incident.total_events
         if events >= 50:
             return 100.0
         return (events / 50.0) * 100.0
 
-    def _targets_score(self, incident) -> float:
+    def _targets_score(self, incident: Scorable) -> float:
         targets = incident.unique_targets
         if targets >= 20:
             return 100.0
         return (targets / 20.0) * 100.0
 
-    def _severity_score(self, incident) -> float:
+    def _severity_score(self, incident: Scorable) -> float:
         worst = 0
         for v in incident.verdicts:
             if v.rule_severity:
@@ -121,7 +135,7 @@ class RiskScorer:
             worst = max(worst, 4)
         return (worst / 4.0) * 100.0
 
-    def _agreement_score(self, incident) -> float:
+    def _agreement_score(self, incident: Scorable) -> float:
         if incident.had_rule_and_ml:
             return 100.0
         if incident.malicious_events > 0:
