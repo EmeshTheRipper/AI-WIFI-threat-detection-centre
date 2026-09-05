@@ -10,6 +10,7 @@ numpy>=1.24.0
 
 # Machine learning
 scikit-learn>=1.3.0
+joblib>=1.3.0
 
 # Explainable AI
 shap>=0.42.0
@@ -17,9 +18,10 @@ shap>=0.42.0
 # Dashboard
 streamlit>=1.28.0
 
-# Backend API (for later)
+# Backend API
 fastapi>=0.104.0
 uvicorn>=0.24.0
+httpx>=0.24.0
 
 # Database
 sqlalchemy>=2.0.0
