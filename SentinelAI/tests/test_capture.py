@@ -43,3 +43,10 @@ def test_non_ip_packet_returns_none():
 
     pkt = Ether(dst="ff:ff:ff:ff:ff:ff")
     assert parse_packet(pkt) is None
+
+
+def test_read_stream_yields_all_packets():
+    from src.capture import PcapReader
+
+    packets = list(PcapReader("data/samples/level2_sample.pcap").read_stream())
+    assert len(packets) == 61

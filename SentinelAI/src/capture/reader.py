@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from scapy.all import PcapReader, rdpcap
+from scapy.all import PcapReader as ScapyPcapReader, rdpcap
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class PcapReader:
             count: Maximum packets to read (0 = all).
         """
         logger.info("Streaming packets from %s", self.filepath)
-        with PcapReader(str(self.filepath)) as reader:
+        with ScapyPcapReader(str(self.filepath)) as reader:
             for i, packet in enumerate(reader):
                 if count and i >= count:
                     break
