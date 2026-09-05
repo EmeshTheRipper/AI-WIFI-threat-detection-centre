@@ -45,6 +45,17 @@ RULE_TECHNIQUES: dict[str, list[Technique]] = {
             description="Pinging a range of IPs to map live hosts on a network.",
         ),
     ],
+    "ARP Spoofing": [
+        Technique(
+            technique_id="T1557.002",
+            name="Adversary-in-the-Middle: ARP Cache Poisoning",
+            tactic="Credential Access",
+            description=(
+                "Advertising a victim IP with conflicting MAC addresses (ARP "
+                "cache poisoning) to intercept or redirect LAN traffic."
+            ),
+        ),
+    ],
 }
 
 # Behavior signals observed by ML (by verdict) mapped to techniques.

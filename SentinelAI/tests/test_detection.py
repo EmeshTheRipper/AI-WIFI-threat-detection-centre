@@ -4,6 +4,7 @@ import pandas as pd
 
 from src.detection import (
     SEVERITY_ORDER,
+    ArpSpoofRule,
     PingSweepRule,
     PortScanRule,
     RuleEngine,
@@ -201,3 +202,58 @@ def test_custom_thresholds():
     lenient_alerts = lenient_rule.evaluate(df)
     assert len(strict_alerts) == 0
     assert len(lenient_alerts) >= 1
+
+
+def _arp_record(src_ip="10.0.0.1", dst_ip="10.0.0.2", hwsrc="00:11:22:33:44:55", op=2):
+    return {
+        "timestamp": "2026-01-01T00:00:00+00:00",
+        "protocol": "ARP",
+        "src_ip": src_ip,
+        "dst_ip": dst_ip,
+        "src_port": None,
+        "dst_port": None,
+        "length": 42,
+        "flags": None,
+        "payload_size": 0,
+        "payload_sample": None,
+        "arp_op": op,
+        "arp_hwsrc": hwsrc,
+        "arp_psrc": src_ip,
+        "arp_pdst": dst_ip,
+    }
+
+
+def test_arp_spoofing_conflicting_macs_detected():
+    records = [
+        _arp_record(hwsrc="00:11:22:33:44:55"),
+        _arp_record(dst_ip="10.0.0.3", hwsrc="aa:bb:cc:dd:ee:ff"),
+    ]
+    df = _make_df(records)
+    rule = ArpSpoofRule(min_replies=1, min_macs=2)
+    alerts = rule.evaluate(df)
+    assert len(alerts) == 1
+    alert = alerts[0]
+    assert alert.rule_name == "ARP Spoofing"
+    assert alert.severity == "high"
+    assert alert.src_ip == "10.0.0.1"
+    assert len(alert.evidence["conflicting_macs"]) == 2
+
+
+def test_arp_high_reply_volume_flags_suspicion():
+    records = [_arp_record(op=2) for _ in range(6)]
+    df = _make_df(records)
+    rule = ArpSpoofRule(min_replies=5, min_macs=2)
+    alerts = rule.evaluate(df)
+    assert len(alerts) == 1
+    assert alerts[0].severity == "medium"
+    assert alerts[0].evidence["total_replies"] == 6
+
+
+def test_arp_benign_exchanges_no_alert():
+    records = [
+        _arp_record(op=1, hwsrc="00:11:22:33:44:55"),
+        _arp_record(op=2, hwsrc="00:11:22:33:44:55"),
+    ]
+    df = _make_df(records)
+    rule = ArpSpoofRule(min_replies=5, min_macs=2)
+    assert rule.evaluate(df) == []

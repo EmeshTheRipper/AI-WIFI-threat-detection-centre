@@ -33,6 +33,7 @@ def test_rule_catalog_has_builtin_rules():
     assert "Port Scan" in RULE_TECHNIQUES
     assert "SYN Flood" in RULE_TECHNIQUES
     assert "Ping Sweep" in RULE_TECHNIQUES
+    assert "ARP Spoofing" in RULE_TECHNIQUES
 
 
 def test_map_rule_returns_technique():
@@ -41,6 +42,13 @@ def test_map_rule_returns_technique():
     assert techniques[0].technique_id == "T1046"
     assert techniques[0].name == "Network Service Discovery"
     assert techniques[0].tactic == "Discovery"
+
+
+def test_map_arp_spoofing_technique():
+    techniques = map_rule("ARP Spoofing")
+    assert len(techniques) == 1
+    assert techniques[0].technique_id == "T1557.002"
+    assert techniques[0].tactic == "Credential Access"
 
 
 def test_map_unknown_rule_returns_empty():
