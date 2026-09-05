@@ -7,7 +7,7 @@ signal agreement (rule AND ML). Provides human-readable risk levels.
 
 import logging
 from dataclasses import dataclass, field
-from typing import Iterable, Protocol, runtime_checkable
+from typing import Iterable, Protocol
 
 logger = logging.getLogger(__name__)
 
@@ -20,18 +20,29 @@ RISK_LEVELS = [
 ]
 
 
-@runtime_checkable
 class Scorable(Protocol):
     """Minimal interface the scorer needs from a correlated incident."""
 
     src_ip: str
-    total_events: int
-    unique_targets: int
-    max_confidence: float
-    had_rule_and_ml: bool
-    malicious_events: int
-    suspicious_events: int
     verdicts: list
+
+    @property
+    def total_events(self) -> int: ...
+
+    @property
+    def malicious_events(self) -> int: ...
+
+    @property
+    def suspicious_events(self) -> int: ...
+
+    @property
+    def unique_targets(self) -> int: ...
+
+    @property
+    def max_confidence(self) -> float: ...
+
+    @property
+    def had_rule_and_ml(self) -> bool: ...
 
 
 def risk_level(score: float) -> str:

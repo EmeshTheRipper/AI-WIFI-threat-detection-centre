@@ -19,7 +19,7 @@ class PcapReader:
         logger.info("Reading all packets from %s", self.filepath)
         packets = rdpcap(str(self.filepath))
         logger.info("Read %d packets", len(packets))
-        return packets
+        return list(packets)
 
     def read_stream(self, count: int = 0):
         """Yield packets one at a time without loading all into memory.

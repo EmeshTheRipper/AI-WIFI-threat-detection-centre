@@ -9,8 +9,8 @@ focused on flow aggregation logic.
 def make_record(
     src_ip="192.168.1.10",
     dst_ip="10.0.0.1",
-    src_port=12345,
-    dst_port=443,
+    src_port: int | None = 12345,
+    dst_port: int | None = 443,
     protocol="TCP",
     length=60,
     payload_size=10,

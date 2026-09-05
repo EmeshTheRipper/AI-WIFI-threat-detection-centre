@@ -74,7 +74,7 @@ def predict_pcap(filepath: str):
     if not attacks.empty:
         print(f"\n  Suspicious flows ({len(attacks)}):")
         for _, row in attacks.head(10).iterrows():
-            print(f"    confidence={row['confidence']:.0%} packets={int(row.get('packets', 0))}")
+            print(f"    confidence={row['confidence']:.0%} packets={int(row.get('packets') or 0)}")
 
 
 def analyze_pcap(filepath: str) -> int:
@@ -164,8 +164,8 @@ def explain_model(filepath: str) -> None:
     print(f"[XAI] Extracting features from {filepath}...")
     df, _ = build_features_from_pcap(filepath, encode=True)
 
-    columns = list(model.feature_names_in_) if hasattr(model, "feature_names_in_") else list(df.columns)
-    X = df[[c for c in df.columns if c in columns]]
+    columns = list(getattr(model, "feature_names_in_", None) or df.columns)
+    X = df.filter(items=columns)
 
     from src.explainability import Explainer
 

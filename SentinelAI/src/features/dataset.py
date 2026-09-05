@@ -2,6 +2,8 @@
 
 import logging
 
+import pandas as pd
+
 from src.capture import PcapReader, parse_packets
 from src.features.builder import encode_features, flows_to_dataframe
 from src.features.extractor import extract_flows
@@ -13,7 +15,7 @@ def build_features_from_pcap(
     filepath: str,
     encode: bool = True,
     drop_ips: bool = True,
-):
+) -> tuple[pd.DataFrame, dict]:
     """Load a PCAP file and compute a feature DataFrame from its traffic.
 
     Returns:

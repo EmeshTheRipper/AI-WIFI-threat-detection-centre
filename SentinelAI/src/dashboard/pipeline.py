@@ -80,4 +80,4 @@ def level_distribution(result: DashboardResult) -> pd.DataFrame:
     for s in result.scored:
         counts[s.level] += 1
     df = pd.DataFrame({"risk_level": list(counts.keys()), "count": list(counts.values())})
-    return df[df["count"] > 0]
+    return df.query("count > 0")
