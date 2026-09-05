@@ -4,10 +4,10 @@
 
 ## Current Status
 
-- **Last updated:** 2026-09-02
-- **Current level:** All 12 levels complete + Backend API, Database, Real-data training support, Docker deployment
-- **Last commit:** `64adc38` — Backend API + DB + labeling + Docker
-- **Branch:** `main` (pushed to GitHub)
+- **Last updated:** 2026-09-06
+- **Current level:** All 12 levels complete + Backend API, Database, Real-data training support, Docker deployment + **2026-09-06 hardening pass**
+- **Last commit:** `e4deaaa` — feat(cli): add --live capture mode and pipeline consistency tests
+- **Branch:** `main` (pushed to GitHub, 9 commits ahead on 2026-09-06)
 
 ## Learning Levels
 
@@ -101,7 +101,16 @@
 - `python main.py --api` starts the server on port 8000.
 - Real-data training support: `label_encoded_features()` in `src/ml/dataset.py` (attach labels by list/scalar/src:dst:port dict) + `load_csv_dataset()`.
 - Docker: `Dockerfile`, `docker-compose.yml` (port 8000 + healthcheck), `.dockerignore`.
-- Tests: `tests/test_db.py` (3), `tests/test_api.py` (6), `tests/test_dataset_labels.py` (5). Full suite: **80 tests passing**.
+- Tests: `tests/test_db.py` (3), `tests/test_api.py` (6), `tests/test_dataset_labels.py` (5).
+
+### 2026-09-06 Hardening & Feature Pass (DONE)
+- **Zero pyright/Pylance errors** across the entire codebase (src, main.py, dashboard, tests). Fixed ~81 type errors: pandas 3.0 native stubs (iterate with `reset_index().to_dict("records")`, guard `df["col"]` unions with `isinstance(x, pd.Series)`/`assert isinstance`, `cast(...)` for scalars), scapy submodule imports (`scapy.layers.l2`, `scapy.layers.inet`, `scapy.packet`, `scapy.utils`, `scapy.sendrecv`).
+- **Enhanced inline documentation** (docstrings) across capture, features, detection, ml, db, explainability.
+- **Live/PCAP pipeline consistency:** `parse_packet()` now emits a uniform schema with ARP/DNS fields; `extract_flows()` aggregates ARP flows; `tests/test_pipeline.py` proves the live-sniff path and PCAP-replay path converge on identical flow DataFrames.
+- **ARP spoofing detection:** new `ArpSpoofRule` in `src/detection/rules.py` (conflicting MAC claims for one IP + high reply volume), registered in `RuleEngine.DEFAULT_RULES`; mapped to **MITRE T1557.002 Adversary-in-the-Middle: ARP Cache Poisoning**.
+- **Human-readable SHAP reasons:** `Explainer` now produces a plain-English `reason` on local explanations (`explain_dataframe` adds `reason` column).
+- **`--live` CLI mode:** `python main.py --live [interface] [count]` snaps packets then runs the same hybrid engine + correlator + risk scoring + MITRE annotation as PCAP analysis.
+- Full suite: **89 tests passing**, `pyright .` = 0 errors, 0 warnings. Pushed to GitHub.
 
 ## Environment / How to run
 
@@ -121,11 +130,23 @@
 
 ## Next actions (when resuming)
 
-**All 12 levels complete + backend/deployment built.** See
-`SentinelAI/docs/FUTURE_WORK.md` for a full list of optional next steps.
-Top suggestions: train on real labeled data, add API auth / switch to
-Postgres, and enhance the dashboard with SHAP visualizations and historical
-DB views.
+Done through the 2026-09-06 hardening pass. Ideas we did NOT do yet you can ask for:
+
+- **Train on real labeled data** (CSV in `src/ml/dataset.py` `load_csv_dataset()` already supported) — replace synthetic-model caveats.
+- **API hardening:** add auth (API key/JWT), switch SQLite → Postgres.
+- **Dashboard v2:** add SHAP visualization tab (global importance bar + waterfall), historical DB views from `AnalyPeriod`/`Incident` tables, ARP-spoof incidents view.
+- **More detections:** DNS tunneling rule, ICMP covert-channel rule, slow-scan/sparse scan detection, ARP reply flooding tuned for wireless.
+- **Live mode polish:** interactive `--live` reporting, periodic flush, DB ingestion of live-incidents.
+- **Packaging/CI:** `ruff`+`black` formatting, GitHub Actions run `pyright` + `pytest` on push, `Dockerfile` refactor to slim image.
+- **Performance:** SHAP explainability cost for large PCAPs (already mitigated via `_shap` reuse), multiprocessing for flow extraction.
+
+Any of these: just say "continue from PROGRESS.md and do X".
+
+## Commands / files useful tomorrow
+
+- Full status recap: on day #1 open PROGRESS.md. 
+- Type check: `cd SentinelAI; venv\Scripts\pyright.exe .` (expect 0 errors)
+- Tests: `cd SentinelAI; venv\Scripts\python.exe -m pytest -q` (expect 89 passed)
 
 ## Scratch / decisions log
 
@@ -142,3 +163,4 @@ DB views.
 - 2026-09-02: Built Level 11 SOC Dashboard (Streamlit app + src/dashboard pipeline reusing full analysis chain). Installed streamlit. All 66 tests passing. `python -m streamlit run dashboard/app.py` launches successfully.
 - 2026-09-02: Built Level 12 Documentation & Deployment (rewrote README.md, finalized requirements/gitignore/pyproject). All 12 levels complete. All 66 tests passing. Project complete.
 - 2026-09-02: Built FastAPI backend (src/api), SQLAlchemy persistence (src/db), real-labeled-data training support (label_encoded_features), and Docker deployment (Dockerfile/docker-compose). Installed fastapi/uvicorn/sqlalchemy/httpx. Added `--api` CLI. All 80 tests passing.
+- 2026-09-06: Updated .vscode settings (Pylance workspace/basic type checking), completed deps (joblib, httpx), fixed pandas/scapy typing across src+tests (0 pyright errors), documented modules, added ArpSpoofRule + MITRE T1557.002 mapping, SHAP human-readable reasons, `--live` CLI mode, and pipeline-consistency tests. All **89 tests** passing, repo pushed (9 commits: `52f7baa..e4deaaa`).
