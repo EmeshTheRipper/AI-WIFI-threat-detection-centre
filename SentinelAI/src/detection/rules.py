@@ -1,7 +1,15 @@
 """Built-in detection rules for network threat identification.
 
-Each rule operates on a flow-level DataFrame and produces ThreatAlert
-objects for suspicious patterns.
+Each rule operates on a flow-level DataFrame (output of
+``src.features.flows_to_dataframe``) and produces ``ThreatAlert`` objects
+for suspicious patterns. Rules are re-evaluated independently, so the
+``RuleEngine`` can run them in any order and merge the results.
+
+Current catalog:
+    - Port Scan      (T1046)  - many destination ports probed on a host
+    - SYN Flood      (T1498)  - high-volume incomplete handshakes
+    - Ping Sweep     (T1018)  - ICMP reachability sweep across hosts
+    - ARP Spoofing   (T1557)  - conflicting MAC claims for the same IP
 """
 
 import logging
@@ -23,6 +31,8 @@ class BaseRule(ABC):
 
 
 class PortScanRule(BaseRule):
+    """Detect hosts that probe many distinct destination ports on a target."""
+
     name = "Port Scan"
     severity = "high"
 
@@ -36,46 +46,47 @@ class PortScanRule(BaseRule):
         if tcp_udp.empty:
             return alerts
 
-        grouped = tcp_udp.groupby("src_ip").apply(
-            lambda g: pd.DataFrame(
-                {
-                    "dst_ip": g["dst_ip"],
-                    "unique_ports": g.groupby("dst_ip")["dst_port"].transform("nunique"),
-                    "pkts": g["packets"],
-                }
-            ),
-            include_groups=False,
-        ).reset_index(level=0).rename(columns={"level_0": "src_ip"})
-
-        for src_ip, group in grouped.groupby("src_ip"):
-            ports_per_host = group.groupby("dst_ip").agg(
-                unique_ports=("unique_ports", "first"),
-                total_pkts=("pkts", "sum"),
+        rows = (
+            tcp_udp.groupby(["src_ip", "dst_ip"])
+            .agg(
+                unique_ports=("dst_port", "nunique"),
+                total_pkts=("packets", "sum"),
             )
-            for dst_ip, row in ports_per_host.iterrows():
-                if row["unique_ports"] >= self.min_unique_ports:
-                    confidence = min(row["unique_ports"] / (self.min_unique_ports * 3), 1.0)
-                    alerts.append(
-                        ThreatAlert(
-                            rule_name=self.name,
-                            severity=self.severity,
-                            confidence=round(confidence, 2),
-                            src_ip=src_ip,
-                            dst_ip=dst_ip,
-                            description=(
-                                f"{int(row['unique_ports'])} unique ports probed on {dst_ip} "
-                                f"with {int(row['total_pkts'])} total packets"
-                            ),
-                            evidence={
-                                "unique_ports": int(row["unique_ports"]),
-                                "total_pkts": int(row["total_pkts"]),
-                            },
-                        )
-                    )
+            .reset_index()
+            .to_dict("records")
+        )
+
+        for rec in rows:
+            src_ip = str(rec["src_ip"])
+            dst_ip = str(rec["dst_ip"])
+            unique_ports = int(rec["unique_ports"])
+            if unique_ports < self.min_unique_ports:
+                continue
+            confidence = min(unique_ports / (self.min_unique_ports * 3), 1.0)
+            total_pkts = int(rec["total_pkts"])
+            alerts.append(
+                ThreatAlert(
+                    rule_name=self.name,
+                    severity=self.severity,
+                    confidence=round(confidence, 2),
+                    src_ip=str(src_ip),
+                    dst_ip=str(dst_ip),
+                    description=(
+                        f"{unique_ports} unique ports probed on {dst_ip} "
+                        f"with {total_pkts} total packets"
+                    ),
+                    evidence={
+                        "unique_ports": unique_ports,
+                        "total_pkts": total_pkts,
+                    },
+                )
+            )
         return alerts
 
 
 class SynFloodRule(BaseRule):
+    """Detect hosts flooding a target with SYN-only handshakes."""
+
     name = "SYN Flood"
     severity = "critical"
 
@@ -89,38 +100,47 @@ class SynFloodRule(BaseRule):
         if tcp.empty:
             return alerts
 
-        agg = tcp.groupby("src_ip").agg(
-            total_syn=("syn_packets", "sum"),
-            total_pkts=("packets", "sum"),
+        rows = (
+            tcp.groupby("src_ip")
+            .agg(total_syn=("syn_packets", "sum"), total_pkts=("packets", "sum"))
+            .reset_index()
+            .to_dict("records")
         )
 
-        for src_ip, row in agg.iterrows():
-            if row["total_syn"] >= self.min_syn_count:
-                ratio = row["total_syn"] / row["total_pkts"] if row["total_pkts"] > 0 else 0
-                if ratio >= self.min_syn_ratio:
-                    confidence = min(ratio * (row["total_syn"] / (self.min_syn_count * 2)), 1.0)
-                    alerts.append(
-                        ThreatAlert(
-                            rule_name=self.name,
-                            severity=self.severity,
-                            confidence=round(confidence, 2),
-                            src_ip=src_ip,
-                            dst_ip=None,
-                            description=(
-                                f"{int(row['total_syn'])} SYN packets ({ratio:.0%} of total) "
-                                f"from {src_ip}"
-                            ),
-                            evidence={
-                                "total_syn": int(row["total_syn"]),
-                                "total_pkts": int(row["total_pkts"]),
-                                "syn_ratio": round(ratio, 3),
-                            },
-                        )
-                    )
+        for rec in rows:
+            src_ip = str(rec["src_ip"])
+            total_syn = int(rec["total_syn"])
+            total_pkts = int(rec["total_pkts"])
+            if total_syn < self.min_syn_count:
+                continue
+            ratio = total_syn / total_pkts if total_pkts > 0 else 0.0
+            if ratio < self.min_syn_ratio:
+                continue
+            confidence = min(ratio * (total_syn / (self.min_syn_count * 2)), 1.0)
+            alerts.append(
+                ThreatAlert(
+                    rule_name=self.name,
+                    severity=self.severity,
+                    confidence=round(confidence, 2),
+                    src_ip=str(src_ip),
+                    dst_ip=None,
+                    description=(
+                        f"{total_syn} SYN packets ({ratio:.0%} of total) "
+                        f"from {src_ip}"
+                    ),
+                    evidence={
+                        "total_syn": total_syn,
+                        "total_pkts": total_pkts,
+                        "syn_ratio": round(ratio, 3),
+                    },
+                )
+            )
         return alerts
 
 
 class PingSweepRule(BaseRule):
+    """Detect ICMP reachability sweeps across many unique hosts."""
+
     name = "Ping Sweep"
     severity = "medium"
 
@@ -133,24 +153,122 @@ class PingSweepRule(BaseRule):
         if icmp.empty:
             return alerts
 
-        agg = icmp.groupby("src_ip")["dst_ip"].nunique().reset_index()
-        agg.columns = ["src_ip", "unique_hosts"]
+        rows = (
+            icmp.groupby("src_ip")
+            .agg(unique_hosts=("dst_ip", "nunique"))
+            .reset_index()
+            .to_dict("records")
+        )
 
-        for _, row in agg.iterrows():
-            if row["unique_hosts"] >= self.min_unique_hosts:
-                confidence = min(row["unique_hosts"] / (self.min_unique_hosts * 3), 1.0)
+        for rec in rows:
+            src_ip = str(rec["src_ip"])
+            unique_hosts = int(rec["unique_hosts"])
+            if unique_hosts < self.min_unique_hosts:
+                continue
+            confidence = min(unique_hosts / (self.min_unique_hosts * 3), 1.0)
+            alerts.append(
+                ThreatAlert(
+                    rule_name=self.name,
+                    severity=self.severity,
+                    confidence=round(confidence, 2),
+                    src_ip=str(src_ip),
+                    dst_ip=None,
+                    description=(
+                        f"ICMP echo requests to {unique_hosts} "
+                        f"unique hosts from {src_ip}"
+                    ),
+                    evidence={"unique_hosts": unique_hosts},
+                )
+            )
+        return alerts
+
+
+class ArpSpoofRule(BaseRule):
+    """Detect ARP cache-poisoning / spoofing patterns.
+
+    Flags a claimed IP when it is advertised from multiple distinct MAC
+    addresses (a classic cache-poisoning signature) or when a single host
+    emits a high volume of unsolicited ARP replies toward many targets.
+    """
+
+    name = "ARP Spoofing"
+    severity = "high"
+
+    def __init__(self, min_replies: int = 5, min_macs: int = 2, min_targets: int = 1):
+        self.min_replies = min_replies
+        self.min_macs = min_macs
+        self.min_targets = min_targets
+
+    def evaluate(self, df: pd.DataFrame) -> list[ThreatAlert]:
+        alerts = []
+        if "protocol" not in df.columns:
+            return alerts
+        arp = df[df["protocol"] == "ARP"]
+        if arp.empty:
+            return alerts
+
+        macs_by_src: dict[str, set] = {}
+        replies_by_src: dict[str, int] = {}
+        targets_by_src: dict[str, set] = {}
+
+        for row in arp.itertuples(name="ArpRow"):
+            src = str(getattr(row, "src_ip", "") or "")
+            if not src:
+                continue
+            mac_field = str(getattr(row, "arp_hwsrc", "") or "")
+            for mac in mac_field.split("|"):
+                if mac:
+                    macs_by_src.setdefault(src, set()).add(mac)
+            replies_by_src[src] = replies_by_src.get(src, 0) + int(
+                getattr(row, "arp_replies", 0) or 0
+            )
+            targets_by_src.setdefault(src, set()).add(
+                str(getattr(row, "dst_ip", "") or "")
+            )
+
+        for src, macs in macs_by_src.items():
+            replies = replies_by_src.get(src, 0)
+            targets = len(targets_by_src.get(src, set()))
+
+            if len(macs) >= self.min_macs:
+                evidence = {
+                    "conflicting_macs": sorted(macs),
+                    "total_replies": replies,
+                    "num_targets": targets,
+                }
+                confidence = min(len(macs) / (self.min_macs * 2), 1.0)
                 alerts.append(
                     ThreatAlert(
                         rule_name=self.name,
-                        severity=self.severity,
+                        severity="high",
                         confidence=round(confidence, 2),
-                        src_ip=row["src_ip"],
+                        src_ip=src,
                         dst_ip=None,
                         description=(
-                            f"ICMP echo requests to {int(row['unique_hosts'])} "
-                            f"unique hosts from {row['src_ip']}"
+                            f"IP {src} advertised from {len(macs)} distinct MAC "
+                            f"addresses ({evidence['conflicting_macs']}) — "
+                            f"possible ARP cache poisoning"
                         ),
-                        evidence={"unique_hosts": int(row["unique_hosts"])},
+                        evidence=evidence,
+                    )
+                )
+            elif replies >= self.min_replies and targets >= self.min_targets:
+                alerts.append(
+                    ThreatAlert(
+                        rule_name=self.name,
+                        severity="medium",
+                        confidence=0.5,
+                        src_ip=src,
+                        dst_ip=None,
+                        description=(
+                            f"High volume of ARP replies ({replies}) from {src} "
+                            f"toward {targets} target(s) — possible spoofing"
+                        ),
+                        evidence={
+                            "total_replies": replies,
+                            "num_targets": targets,
+                            "confirmed_conflict": False,
+                        },
                     )
                 )
         return alerts

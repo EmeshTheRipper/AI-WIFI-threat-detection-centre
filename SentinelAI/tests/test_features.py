@@ -53,7 +53,8 @@ def test_flow_summary_counts():
 
 
 def test_build_features_from_pcap(tmp_path):
-    from scapy.all import IP, TCP, wrpcap
+    from scapy.layers.inet import IP, TCP
+    from scapy.utils import wrpcap
 
     pcap = tmp_path / "sample.pcap"
     packets = [

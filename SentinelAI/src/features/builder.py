@@ -23,6 +23,9 @@ NUMERIC_FLOW_FIELDS = [
     "mean_payload",
     "syn_packets",
     "rst_packets",
+    "arp_requests",
+    "arp_replies",
+    "arp_unique_hwsrc",
 ]
 
 CATEGORICAL_FLOW_FIELDS = [
@@ -31,12 +34,23 @@ CATEGORICAL_FLOW_FIELDS = [
 
 
 def flows_to_dataframe(flows: list[dict]) -> pd.DataFrame:
-    """Convert a list of flow dicts into a numeric-feature DataFrame."""
+    """Convert a list of flow dicts into a numeric-feature DataFrame.
+
+    Args:
+        flows: Flow feature dicts from ``extract_flows``.
+
+    Returns:
+        A DataFrame with numeric flow features coerced and ``protocol``
+        stored as a categorical column.
+    """
     df = pd.DataFrame(flows)
 
     for field in NUMERIC_FLOW_FIELDS:
         if field in df.columns:
-            df[field] = pd.to_numeric(df[field], errors="coerce").fillna(0)
+            numeric = pd.to_numeric(df[field], errors="coerce")
+            if isinstance(numeric, pd.Series):
+                numeric = numeric.fillna(0)
+            df[field] = numeric
 
     if "protocol" in df.columns:
         df["protocol"] = df["protocol"].astype("category")
@@ -49,7 +63,7 @@ def encode_features(df: pd.DataFrame, drop_ips: bool = True) -> pd.DataFrame:
     """Encode categorical features for ML.
 
     Args:
-        df: DataFrame from flows_to_dataframe.
+        df: DataFrame from ``flows_to_dataframe``.
         drop_ips: Drop raw IP address strings (nearly unique, not useful
             predictors on their own).
 
@@ -69,16 +83,33 @@ def encode_features(df: pd.DataFrame, drop_ips: bool = True) -> pd.DataFrame:
     return encoded
 
 
+def _sum_column(df: pd.DataFrame, column: str) -> int:
+    """Return the scalar sum of a column, defaulting to 0 when absent."""
+    if column not in df.columns:
+        return 0
+    values = df[column]
+    if isinstance(values, pd.Series):
+        return int(values.sum())
+    return 0
+
+
 def flow_summary(df: pd.DataFrame) -> dict:
-    """Produce a small human-readable summary of a flow DataFrame."""
+    """Produce a small human-readable summary of a flow DataFrame.
+
+    Returns:
+        dict with flow count, column list, protocol distribution, and
+        aggregated packet/byte totals.
+    """
+    protocol_counts: dict = {}
+    if "protocol" in df.columns:
+        proto = df["protocol"]
+        if isinstance(proto, pd.Series):
+            protocol_counts = proto.value_counts().to_dict()
+
     return {
         "flows": int(len(df)),
         "columns": list(df.columns),
-        "protocol_counts": (
-            df["protocol"].value_counts().to_dict()
-            if "protocol" in df.columns
-            else {}
-        ),
-        "total_packets": int(df["packets"].sum()) if "packets" in df.columns else 0,
-        "total_bytes": int(df["total_bytes"].sum()) if "total_bytes" in df.columns else 0,
+        "protocol_counts": protocol_counts,
+        "total_packets": _sum_column(df, "packets"),
+        "total_bytes": _sum_column(df, "total_bytes"),
     }

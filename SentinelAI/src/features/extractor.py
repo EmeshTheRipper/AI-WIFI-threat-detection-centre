@@ -3,10 +3,17 @@
 A network *flow* is a unidirectional stream of packets sharing the same
 5-tuple: src_ip, src_port, dst_ip, dst_port, protocol. Attack signatures
 often manifest as statistical differences in these aggregated flows.
+
+ARP traffic has no ports, so its flows are keyed on
+(src_ip, dst_ip, protocol) and additionally aggregate per-flow ARP metrics
+(reply/request counts and distinct hardware addresses) to support
+ARP-spoofing detection downstream.
 """
 
 import logging
 from collections import defaultdict
+from statistics import pstdev
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +43,7 @@ def extract_flows(records: list[dict]) -> list[dict]:
     grouped: dict[tuple, list[dict]] = defaultdict(list)
     for record in records:
         key = flow_key(record)
-        # ICMP flows carry no ports; require only IPs and protocol
+        # IP/ARP flows need at least both addresses and a protocol.
         if not key or None in (key[0], key[2], key[4]):
             continue
         grouped[key].append(record)
@@ -48,8 +55,8 @@ def extract_flows(records: list[dict]) -> list[dict]:
 
 def _aggregate_flow(key: tuple, packets: list[dict]) -> dict:
     src_ip, src_port, dst_ip, dst_port, protocol = key
-    sizes = [p["length"] for p in packets]
-    payloads = [p["payload_size"] for p in packets]
+    sizes = [int(p["length"]) for p in packets]
+    payloads = [int(p["payload_size"]) for p in packets]
 
     syn_count = sum(
         1
@@ -58,7 +65,7 @@ def _aggregate_flow(key: tuple, packets: list[dict]) -> dict:
     )
     rst_count = sum(1 for p in packets if p.get("flags") and "R" in str(p["flags"]))
 
-    return {
+    flow: dict[str, Any] = {
         "src_ip": src_ip,
         "src_port": src_port,
         "dst_ip": dst_ip,
@@ -69,17 +76,18 @@ def _aggregate_flow(key: tuple, packets: list[dict]) -> dict:
         "min_size": min(sizes),
         "max_size": max(sizes),
         "mean_size": round(sum(sizes) / len(sizes), 2),
-        "std_size": round(_std(sizes), 2),
+        "std_size": round(pstdev(sizes), 2),
         "total_payload": sum(payloads),
         "mean_payload": round(sum(payloads) / len(payloads), 2),
         "syn_packets": syn_count,
         "rst_packets": rst_count,
     }
 
+    if protocol == "ARP":
+        flow["arp_requests"] = sum(1 for p in packets if int(p.get("arp_op") or 0) == 1)
+        flow["arp_replies"] = sum(1 for p in packets if int(p.get("arp_op") or 0) == 2)
+        macs = {p.get("arp_hwsrc") for p in packets if p.get("arp_hwsrc")}
+        flow["arp_unique_hwsrc"] = len(macs)
+        flow["arp_hwsrc"] = "|".join(sorted(str(m) for m in macs))
 
-def _std(values: list) -> float:
-    if len(values) < 2:
-        return 0.0
-    mean = sum(values) / len(values)
-    variance = sum((v - mean) ** 2 for v in values) / (len(values) - 1)
-    return variance**0.5
+    return flow

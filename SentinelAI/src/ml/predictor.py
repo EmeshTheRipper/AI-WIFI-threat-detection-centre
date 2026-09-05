@@ -38,7 +38,8 @@ class ModelPredictor:
 
     def summary(self, classified_df: pd.DataFrame) -> dict:
         counts = classified_df["label_name"].value_counts().to_dict()
-        avg_conf = classified_df["confidence"].mean()
+        conf = classified_df["confidence"]
+        avg_conf = conf.mean() if isinstance(conf, pd.Series) else 0.0
         return {
             "total": len(classified_df),
             "counts": counts,

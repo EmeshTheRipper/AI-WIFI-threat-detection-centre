@@ -1,5 +1,7 @@
 """Tests for the dashboard data pipeline."""
 
+import pandas as pd
+
 from src.dashboard import analyze, level_distribution, to_summary_frame
 
 SAMPLE = "data/samples/level2_sample.pcap"
@@ -32,4 +34,6 @@ def test_level_distribution_shape():
     result = analyze(SAMPLE)
     df = level_distribution(result)
     assert {"risk_level", "count"} <= set(df.columns)
-    assert int(df["count"].sum()) == len(result.scored)
+    counts = df["count"]
+    total = int(counts.sum()) if isinstance(counts, pd.Series) else 0
+    assert total == len(result.scored)

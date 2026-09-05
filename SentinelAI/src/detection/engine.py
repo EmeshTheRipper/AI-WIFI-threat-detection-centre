@@ -5,11 +5,17 @@ import logging
 import pandas as pd
 
 from .alerts import SEVERITY_ORDER, ThreatAlert
-from .rules import BaseRule, PingSweepRule, PortScanRule, SynFloodRule
+from .rules import (
+    ArpSpoofRule,
+    BaseRule,
+    PingSweepRule,
+    PortScanRule,
+    SynFloodRule,
+)
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_RULES = [PortScanRule(), SynFloodRule(), PingSweepRule()]
+DEFAULT_RULES = [PortScanRule(), SynFloodRule(), PingSweepRule(), ArpSpoofRule()]
 
 
 class RuleEngine:

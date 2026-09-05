@@ -93,7 +93,10 @@ class HybridEngine:
             rule_conf = rule_hit.confidence if rule_hit else 0.0
 
             ml_pred = "attack" if row.get("prediction", 0) == 1 else "normal"
-            ml_conf = float(row.get("confidence", 0.0))
+            raw_ml_conf = row.get("confidence", 0.0)
+            ml_conf = float(raw_ml_conf) if raw_ml_conf is not None else 0.0
+            raw_dst_port = row.get("dst_port", 0)
+            dst_port = int(raw_dst_port) if raw_dst_port is not None else 0
 
             verdict, combined_conf, reasons = self._combine(
                 rule_alert, rule_severity, rule_conf,
@@ -103,7 +106,7 @@ class HybridEngine:
             verdicts.append(ThreatVerdict(
                 src_ip=src_ip,
                 dst_ip=str(row.get("dst_ip", "")),
-                dst_port=int(row.get("dst_port", 0)),
+                dst_port=dst_port,
                 protocol=str(raw_proto.get(idx, "")),
                 rule_alert=rule_alert,
                 rule_severity=rule_severity,
@@ -146,7 +149,7 @@ class HybridEngine:
             reasons.append(f"ml:attack({ml_conf:.0%})")
 
         if rule_alert and ml_pred == "attack":
-            severity_score = SEVERITY_ORDER.get(rule_severity, 0) / 4
+            severity_score = SEVERITY_ORDER.get(rule_severity or "", 0) / 4
             combined = (self.rule_weight * severity_score) + (self.ml_weight * ml_conf)
             return "malicious", round(min(combined, 1.0), 3), reasons
 

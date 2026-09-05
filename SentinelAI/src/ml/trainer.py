@@ -3,6 +3,7 @@
 import json
 import logging
 from pathlib import Path
+from typing import cast
 
 import joblib
 import numpy as np
@@ -48,7 +49,7 @@ class ModelTrainer:
         self._feature_columns = available
         X = df[available].copy()
         y = df[label_col].copy()
-        return X, y
+        return cast(pd.DataFrame, X), cast(pd.Series, y)
 
     def train(self, df: pd.DataFrame, label_col: str = "label") -> dict:
         X, y = self.prepare_data(df, label_col)
@@ -77,7 +78,7 @@ class ModelTrainer:
 
     def predict_proba(self, df: pd.DataFrame) -> np.ndarray:
         X = self._get_features(df)
-        return self.model.predict_proba(X)
+        return cast(np.ndarray, self.model.predict_proba(X))
 
     def _get_features(self, df: pd.DataFrame) -> pd.DataFrame:
         fitted = getattr(self.model, "feature_names_in_", None)
@@ -96,7 +97,7 @@ class ModelTrainer:
         missing = [c for c in expected if c not in X.columns]
         for col in missing:
             X[col] = 0
-        return X[expected]
+        return cast(pd.DataFrame, X[expected])
 
     def save(self, model_path: str, metadata: dict | None = None):
         path = Path(model_path)
@@ -117,9 +118,9 @@ class ModelTrainer:
     def _compute_metrics(self, y_true, y_pred) -> dict:
         return {
             "accuracy": round(accuracy_score(y_true, y_pred), 4),
-            "precision": round(precision_score(y_true, y_pred, zero_division=0), 4),
-            "recall": round(recall_score(y_true, y_pred, zero_division=0), 4),
-            "f1": round(f1_score(y_true, y_pred, zero_division=0), 4),
+            "precision": round(precision_score(y_true, y_pred, zero_division="warn"), 4),
+            "recall": round(recall_score(y_true, y_pred, zero_division="warn"), 4),
+            "f1": round(f1_score(y_true, y_pred, zero_division="warn"), 4),
             "confusion_matrix": confusion_matrix(y_true, y_pred).tolist(),
             "classification_report": classification_report(
                 y_true, y_pred, target_names=["normal", "attack"], output_dict=True

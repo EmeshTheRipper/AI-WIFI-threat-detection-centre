@@ -5,6 +5,7 @@ can be queried and surfaced by the API / dashboard after the fact.
 """
 
 import logging
+from typing import Any, cast
 
 from sqlalchemy import (
     Column,
@@ -25,7 +26,7 @@ DEFAULT_DB_URL = "sqlite:///sentinelai.db"
 
 
 def build_engine(db_url: str = DEFAULT_DB_URL):
-    kwargs = {"echo": False, "future": True}
+    kwargs: dict[str, Any] = {"echo": False, "future": True}
     if db_url.startswith("sqlite:///:memory:"):
         kwargs["poolclass"] = StaticPool
         kwargs["connect_args"] = {"check_same_thread": False}
@@ -78,7 +79,7 @@ class Database:
             )
             session.add(a)
             session.commit()
-            return a.id
+            return cast(int, a.id)
 
     def save_incidents(self, analysis_id: int, incident_rows: list[dict]) -> None:
         with self.session_factory() as session:

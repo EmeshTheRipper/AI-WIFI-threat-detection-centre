@@ -162,8 +162,12 @@ def label_encoded_features(
             )
         if key is None:
             raise ValueError("labels dict requires a key column (flow_key) or src/dst IP columns")
-        result["label"] = result[key].map(labels)
-        if result["label"].isna().any():
+        keys = result[key]
+        if not isinstance(keys, pd.Series):
+            raise ValueError("key column could not be read as a Series")
+        labels_series = keys.map(lambda k: labels.get(k))
+        result["label"] = labels_series
+        if bool(labels_series.isna().any()):
             raise ValueError("Some rows have no matching label in the provided mapping")
         if key != "__flow_key__":
             result = result.drop(columns=[key])
