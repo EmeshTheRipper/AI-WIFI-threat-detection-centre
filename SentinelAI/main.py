@@ -183,6 +183,65 @@ def explain_model(filepath: str) -> None:
             print(f"     +{e['shap']:<8} {e['feature']} (val={e['value']})")
 
 
+def analyze_live(interface: str | None = None, count: int = 50) -> None:
+    """Capture packets from an interface and run the full hybrid chain.
+
+    Demonstrates that the live-sniffing ingestion path feeds the identical
+    feature pipeline (parse -> extract -> DataFrame) as PCAP replay.
+    """
+    import time
+
+    from src.capture import PacketSniffer
+    from src.correlation import Correlator
+    from src.detection import HybridEngine
+    from src.features import extract_flows, flows_to_dataframe
+    from src.mitre import annotate_incident
+    from src.risk import RiskScorer
+
+    records = []
+
+    def collect(packet) -> None:
+        record = parse_packet(packet)
+        if record:
+            records.append(record)
+
+    print(
+        f"\n[LIVE] Capturing {count} packets on "
+        f"'{interface or 'default interface'}'..."
+    )
+    sniffer = PacketSniffer(interface=interface, packet_count=count)
+    sniffer.start(collect, count=count)
+    while sniffer.is_running:
+        time.sleep(0.2)
+    print(f"[LIVE] Captured {len(records)} parseable packets")
+
+    if not records:
+        print(
+            "  No packets captured. Needs Npcap + admin rights (Windows) or root "
+            "(Linux)."
+        )
+        return
+
+    print("[FEATURES] Building flow features from live capture...")
+    df = flows_to_dataframe(extract_flows(records))
+    print(f"  Flows grouped: {len(df)}")
+
+    print("\n[DETECTION] Running hybrid detection...")
+    model_path = "models/sentinel_model.joblib"
+    engine = HybridEngine(
+        model_path=model_path if Path(model_path).exists() else None
+    )
+    verdicts = engine.analyze(df)
+    print(f"  By verdict: {engine.summary(verdicts)['by_verdict']}")
+
+    print("\n[RISK] Scoring correlated incidents...")
+    incidents = Correlator().correlate(verdicts)
+    scored = RiskScorer().score_all(incidents)
+    for s in scored:
+        ann = annotate_incident(s.incident)
+        print(f"  {s.summary()}  MITRE={ann['technique_ids']}")
+
+
 def main():
     """Main function - entry point of SentinelAI."""
     setup_logging()
@@ -204,6 +263,10 @@ def main():
             predict_pcap(sys.argv[2])
         elif cmd == "--explain" and len(sys.argv) > 2:
             explain_model(sys.argv[2])
+        elif cmd == "--live":
+            interface = sys.argv[2] if len(sys.argv) > 2 else None
+            count = int(sys.argv[3]) if len(sys.argv) > 3 else 50
+            analyze_live(interface=interface, count=count)
         elif cmd == "--api":
             run_api()
         else:
@@ -214,6 +277,7 @@ def main():
         print("  python main.py --train               — Train model on synthetic data")
         print("  python main.py --predict <file.pcap> — Predict using saved model")
         print("  python main.py --explain <file.pcap> — SHAP explanations on flows")
+        print("  python main.py --live [dev] [n]      — Live capture + hybrid analysis")
         print("  python main.py --api                 — Start FastAPI backend (port 8000)\n")
 
 
