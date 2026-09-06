@@ -28,6 +28,7 @@ data/raw/*.pcap
 data/raw/*.pcapng
 data/processed/*.csv
 data/processed/*.parquet
+data/uploads/
 
 # Models (large files - track with DVC later)
 models/*.pkl

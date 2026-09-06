@@ -5,7 +5,7 @@
 ## Current Status
 
 - **Last updated:** 2026-09-06
-- **Current level:** All 12 levels complete + Backend API, Database, Real-data training support, Docker deployment + **2026-09-06 hardening pass**
+- **Current level:** All 12 levels complete + Backend API, Database, Real-data training support, Docker deployment + **2026-09-06 hardening pass** + **2026-09-06 web console pass**
 - **Last commit:** `e4deaaa` — feat(cli): add --live capture mode and pipeline consistency tests
 - **Branch:** `main` (pushed to GitHub, 9 commits ahead on 2026-09-06)
 
@@ -112,12 +112,21 @@
 - **`--live` CLI mode:** `python main.py --live [interface] [count]` snaps packets then runs the same hybrid engine + correlator + risk scoring + MITRE annotation as PCAP analysis.
 - Full suite: **89 tests passing**, `pyright .` = 0 errors, 0 warnings. Pushed to GitHub.
 
+### 2026-09-06 Web Console Pass (DONE)
+- **`src/api/analyzer.py`** — shared orchestration: captures → features → hybrid → correlation → risk → MITRE → SHAP reasons, plus persistence. Returns one rich JSON payload (`verdict_counts`, `suspicious_alerts`, `critical_incidents`, `max_risk_score`, per-flow `flow_details`, and human-readable `explanations`). Includes `capture_live_records()` for server-side sniffing.
+- **`src/api/server.py`** — FastAPI v2: added `POST /analyze/upload` (multipart PCAP), `POST /analyze/live` (interface + count), extended `/analyze` + `/analyze/default` to return the rich payload with `threat_category` per incident (backward-compatible — existing tests still pass).
+- **`src/api/client.py`** — `SentinelClient` drives the front-end over HTTP (`/analyze`, `/analyze/upload`, `/analyze/live`, `/incidents`, `/health`) with a transparent in-process fallback when the backend is offline; every run persists to `sentinelai.db`.
+- **`dashboard/app.py`** — rebuilt as a 3-tab SOC Web Console: *Scan & Detect* (file uploader + "Run Hybrid Analysis", "Scan Sample PCAP", "Start Live Capture" with interface/count), *SOC Results* (5 KPI cards, verdict bar chart, risk-progress incident table with MITRE, XAI expanders), *History* (persisted analyses + incidents). API status indicator in the sidebar.
+- Verified live: API `/health`, `/analyze/default` returns 61 packets / 51 incidents / SHAP reasons; AppTest click-through of the console runs the sample analysis with zero exceptions.
+- New tests: `tests/test_client.py` (5) + api upload/live/rich-field tests (4). **98 tests passing**, `pyright .` = 0 errors. Not yet committed.
+
 ## Environment / How to run
 
 - **Python:** `py` launcher (Python 3.14.6). Installed deps: scapy, pandas, numpy, pytest, scikit-learn, shap, streamlit.
 - **Venv:** exists at `SentinelAI/venv/` (activated via `SentinelAI\venv\Scripts\activate`).
 - **Run app:** `SentinelAI\venv\Scripts\python.exe main.py data/samples/level2_sample.pcap`
 - **Run dashboard:** `SentinelAI\venv\Scripts\python.exe -m streamlit run dashboard/app.py`
+- **Run API:** `SentinelAI\venv\Scripts\python.exe main.py --api` (docs at http://localhost:8000/docs)
 - **Run tests:** `SentinelAI\venv\Scripts\python.exe -m pytest -v`
 - **NOTE:** shap, streamlit now installed. fastapi, sqlalchemy still in `requirements.txt` NOT installed.
 - Sample data: `data/samples/level2_sample.pcap` (61 packets).
@@ -130,15 +139,15 @@
 
 ## Next actions (when resuming)
 
-Done through the 2026-09-06 hardening pass. Ideas we did NOT do yet you can ask for:
+Done through the 2026-09-06 hardening pass + **web console pass**. Ideas we did NOT do yet you can ask for:
 
-- **Train on real labeled data** (CSV in `src/ml/dataset.py` `load_csv_dataset()` already supported) — replace synthetic-model caveats.
+- **Train on real labeled data** (CSV in `src/ml/dataset.py` `load_csv_dataset()` already supported) — replace synthetic-model caveats (the console already shows the SHAP reasons that depend on this).
 - **API hardening:** add auth (API key/JWT), switch SQLite → Postgres.
-- **Dashboard v2:** add SHAP visualization tab (global importance bar + waterfall), historical DB views from `AnalyPeriod`/`Incident` tables, ARP-spoof incidents view.
+- **Dashboard v3:** interactive risk-score gauge per row, raw flow-detail tab in the console, ARP-spoof incidents view.
 - **More detections:** DNS tunneling rule, ICMP covert-channel rule, slow-scan/sparse scan detection, ARP reply flooding tuned for wireless.
-- **Live mode polish:** interactive `--live` reporting, periodic flush, DB ingestion of live-incidents.
+- **Live mode polish:** periodic flush of live packets into the console, streaming/websocket results, DB ingestion of live-incidents.
 - **Packaging/CI:** `ruff`+`black` formatting, GitHub Actions run `pyright` + `pytest` on push, `Dockerfile` refactor to slim image.
-- **Performance:** SHAP explainability cost for large PCAPs (already mitigated via `_shap` reuse), multiprocessing for flow extraction.
+- **Performance:** SHAP explainability cost for large PCAPs (already mitigated via `_shap` reuse + capped `max_explanations`), multiprocessing for flow extraction.
 
 Any of these: just say "continue from PROGRESS.md and do X".
 
@@ -146,7 +155,7 @@ Any of these: just say "continue from PROGRESS.md and do X".
 
 - Full status recap: on day #1 open PROGRESS.md. 
 - Type check: `cd SentinelAI; venv\Scripts\pyright.exe .` (expect 0 errors)
-- Tests: `cd SentinelAI; venv\Scripts\python.exe -m pytest -q` (expect 89 passed)
+- Tests: `cd SentinelAI; venv\Scripts\python.exe -m pytest -q` (expect 98 passed)
 
 ## Scratch / decisions log
 
@@ -164,3 +173,4 @@ Any of these: just say "continue from PROGRESS.md and do X".
 - 2026-09-02: Built Level 12 Documentation & Deployment (rewrote README.md, finalized requirements/gitignore/pyproject). All 12 levels complete. All 66 tests passing. Project complete.
 - 2026-09-02: Built FastAPI backend (src/api), SQLAlchemy persistence (src/db), real-labeled-data training support (label_encoded_features), and Docker deployment (Dockerfile/docker-compose). Installed fastapi/uvicorn/sqlalchemy/httpx. Added `--api` CLI. All 80 tests passing.
 - 2026-09-06: Updated .vscode settings (Pylance workspace/basic type checking), completed deps (joblib, httpx), fixed pandas/scapy typing across src+tests (0 pyright errors), documented modules, added ArpSpoofRule + MITRE T1557.002 mapping, SHAP human-readable reasons, `--live` CLI mode, and pipeline-consistency tests. All **89 tests** passing, repo pushed (9 commits: `52f7baa..e4deaaa`).
+- 2026-09-06: Built the SOC **Web Console** pass. New `src/api/analyzer.py` (shared full-analysis chain returning a single rich JSON payload + SHAP reasons), extended `src/api/server.py` with `/analyze/upload` (multipart) + `/analyze/live` endpoints and `threat_category` per incident, new `src/api/client.py` (SentinelClient HTTP driver with in-process fallback), and a rebuilt `dashboard/app.py` (Scan & Detect / SOC Results / History tabs with KPI cards, risk-progress incident table with MITRE, and XAI expanders). Verified via live API calls + Streamlit AppTest click-through. All **98 tests** passing, `pyright` 0 errors.

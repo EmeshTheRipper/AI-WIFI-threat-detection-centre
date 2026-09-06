@@ -58,15 +58,29 @@ python main.py --predict data/samples/level2_sample.pcap
 python main.py --explain data/samples/level2_sample.pcap
 ```
 
-### SOC Dashboard
+### SOC Web Console (Streamlit)
 
 ```bash
+# Terminal 1: start the backend so runs persist to sentinelai.db
+python main.py --api
+
+# Terminal 2: launch the Web Console
 python -m streamlit run dashboard/app.py
 ```
 
-Opens an interactive dashboard with KPIs, risk-level distribution, scored
-incident table, and MITRE summaries. Edit the PCAP path in the app to analyze
-a different capture.
+The dashboard connects to the FastAPI backend and provides:
+
+- **Upload & Scan** — upload any `.pcap`/`.pcapng` and click *Run Hybrid Analysis*
+- **One-Click Quick Scan** — *Scan Sample PCAP* analyzes the bundled sample
+- **Live Capture** — configure an interface + packet count and click
+  *Start Live Capture* (needs admin/root privileges)
+- **Real-time SOC results** — KPI cards (packets, flows, suspicious alerts,
+  critical incidents, max risk), an incident table with risk score (0-100) and
+  MITRE ATT&CK mapping, and human-readable SHAP explanations per flagged flow
+- **History** — persisted analyses and incidents from `sentinelai.db`
+
+If the backend is not running, the console transparently falls back to
+in-process analysis (results still persist to `sentinelai.db`).
 
 ### FastAPI backend
 
@@ -81,6 +95,8 @@ uvicorn src.api.server:app --host 0.0.0.0 --port 8000
 Interactive docs at `http://localhost:8000/docs`. Endpoints:
 - `GET /health` — service status
 - `POST /analyze` — analyze a PCAP, returns + persists risk-scored incidents
+- `POST /analyze/upload` — multipart PCAP upload analysis
+- `POST /analyze/live` — sniff packets live and run the full pipeline
 - `GET /analyze/default` — analyze the bundled sample PCAP
 - `GET /incidents?analysis_id=N` — query stored incidents
 - `GET /analyses` — list stored analyses
@@ -126,9 +142,11 @@ PCAP capture ──> Feature extraction ──> Rule detection ─┐
   T1498, Ping Sweep → T1018, malicious → T1190.
 - **Explainability** (`src/explainability/`): SHAP global feature importance +
   per-sample local explanations.
-- **Dashboard** (`src/dashboard/` + `dashboard/app.py`): data pipeline + UI.
+- **Dashboard** (`src/dashboard/` + `dashboard/app.py`): data pipeline + SOC Web Console.
 - **Backend** (`src/api/` + `src/db/`): FastAPI HTTP endpoints + SQLAlchemy
-  persistence of analyses and incidents.
+  persistence of analyses and incidents. `src/api/analyzer.py` runs the shared
+  chain and `src/api/client.py` lets the console drive it over HTTP with an
+  in-process fallback.
 
 ### Training on real labeled data
 
