@@ -1,5 +1,7 @@
 """Tests for the SentinelAI FastAPI backend."""
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -57,3 +59,56 @@ def test_analyses_endpoint(client):
     resp = client.get("/analyses")
     assert resp.status_code == 200
     assert len(resp.json()) >= 1
+
+
+def test_analyze_upload(client):
+    data = Path("data/samples/level2_sample.pcap").read_bytes()
+    resp = client.post(
+        "/analyze/upload",
+        files={"file": ("sample.pcap", data, "application/vnd.tcpdump.pcap")},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["source"] == "upload"
+    assert body["packets"] == 61
+    assert isinstance(body["analysis_id"], int)
+    assert "flow_details" in body
+    assert "explanations" in body
+    for f in Path("data/uploads").glob("*_sample.pcap"):
+        f.unlink()
+
+
+def test_analyze_upload_empty(client):
+    resp = client.post(
+        "/analyze/upload",
+        files={"file": ("empty.pcap", b"", "application/vnd.tcpdump.pcap")},
+    )
+    assert resp.status_code == 400
+
+
+def test_analyze_live_with_stubbed_capture(client, monkeypatch):
+    from src.api.analyzer import read_pcap_records
+
+    fake = read_pcap_records("data/samples/level2_sample.pcap")
+    monkeypatch.setattr("src.api.server.capture_live_records", lambda i, c: fake)
+    resp = client.post("/analyze/live", json={"interface": "eth0", "count": 5})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["source"] == "live"
+    assert body["packets"] == 61
+
+
+def test_analyze_rich_fields(client):
+    resp = client.post("/analyze", json={"pcap": "data/samples/level2_sample.pcap"})
+    body = resp.json()
+    for key in [
+        "verdict_counts",
+        "suspicious_alerts",
+        "critical_incidents",
+        "max_risk_score",
+        "flow_details",
+        "explanations",
+        "model_available",
+    ]:
+        assert key in body
+    assert "threat_category" in body["incidents"][0]
